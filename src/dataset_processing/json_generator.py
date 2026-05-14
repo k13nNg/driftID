@@ -2,6 +2,13 @@ import os
 import re
 import json
 
+'''
+------------------------------------------------------------------------------
+This file generates the dataset_meta.json file from the car-dataset-200 folder
+------------------------------------------------------------------------------
+'''
+
+
 # define the regex to look for the pattern:
 #           model-make-gen-(4 digits start year)-(4 digits end year)
 regex = re.compile(r"([a-z0-9]+)-([a-z0-9-]+)(?:-gen)?-(\d{4})-(\d{4})")
