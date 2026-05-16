@@ -1,7 +1,7 @@
 from collections import defaultdict
 import os
 import json
-from torch.utils import Dataset
+from torch.utils.data import Dataset
 from PIL import Image
 
 class CarImageDataset(Dataset):
@@ -23,21 +23,22 @@ class CarImageDataset(Dataset):
         self.classes = sorted(list(set(unique_class_strings)))
 
         # index labels
-        self.class_name2id, self.id2class_name= defaultdict(list)
+        self.class_name_to_id = defaultdict(list)
+        self.id_to_class_name = defaultdict(list)
 
-        for i, class_name in enumerate(self.classes):
-            self.class_name2id[class_name] = i
-            self.id2class_name[i] = class_name
+        for i, name in enumerate(self.classes):
+            self.class_name_to_id[name] = i
+            self.id_to_class_name[i] = name
     
     def __len__(self):
         return len(self.data)
     
     def __getitem__(self, idx):
         item = self.data[idx]
-        image = Image.open(item["image_path"])
-        class_name = self.id2class_name[f"{item['make']}_{item['model']}_{item['start_year']}_{item['end_year']}"]
+        image = Image.open(item["image_path"]).convert("RGB")
+        class_id = self.class_name_to_id[f"{item['make']}_{item['model']}_{item['start_year']}_{item['end_year']}"]
 
         if self.transform:
             image = self.transform(image)
 
-        return image, class_name
+        return image, class_id
