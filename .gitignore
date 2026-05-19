@@ -1,1 +1,9 @@
 /car-dataset-200
+./submit_job.sh
+/slurm_output_logs
+/features
+submit_job.sh
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
