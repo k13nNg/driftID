@@ -23,8 +23,8 @@ class CarImageDataset(Dataset):
         self.classes = sorted(list(set(unique_class_strings)))
 
         # index labels
-        self.class_name_to_id = defaultdict(list)
-        self.id_to_class_name = defaultdict(list)
+        self.class_name_to_id = {}
+        self.id_to_class_name = {}
 
         for i, name in enumerate(self.classes):
             self.class_name_to_id[name] = i
@@ -35,7 +35,13 @@ class CarImageDataset(Dataset):
     
     def __getitem__(self, idx):
         item = self.data[idx]
-        image = Image.open(item["image_path"]).convert("RGB")
+        image = Image.open(item["image_path"])
+
+        if image.mode == "P":
+            image = image.convert("RGBA")
+
+        image = image.convert("RGB")
+
         class_id = self.class_name_to_id[f"{item['make']}_{item['model']}_{item['start_year']}_{item['end_year']}"]
 
         if self.transform:

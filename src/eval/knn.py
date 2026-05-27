@@ -1,79 +1,67 @@
-import faiss
-import torch
-import torch.nn.functional as F
 from collections import Counter
+import torch
+import faiss
 import numpy as np
+import torch.nn.functional as F
+from scipy.stats import mode
 
-class FAISSKNN:
-    def __init__(self, dim: int, k: int = 5):
+class KNN:
+    def __init__(self, k, index_file_path, labels_file_path):
+        self.index = faiss.read_index(index_file_path)
+        self.labels = np.load(labels_file_path)
         self.k = k
-        self.index = faiss.IndexFlatIP(dim)  # cosine similarity (after normalization)
-        self.train_labels = None
 
-    def fit(self, feature_files, label_files):
-        """
-        Build FAISS index from batched feature + label files.
-        """
-        all_labels = []
+    def predict(self, x):
+        # normalize x before searching
+        x = F.normalize(x, dim = 1)
+        x = x.detach().cpu().numpy().astype('float32')
 
-        for feat_file, label_file in zip(feature_files, label_files):
-            feats = torch.load(feat_file)
-            labels = torch.load(label_file)
+        # x= x.astype("float32")
 
-            # normalize for cosine similarity
-            feats = F.normalize(feats, dim=1)
+        x = x /np.linalg.norm(x, axis = 1, keepdims= True)
 
-            # add to FAISS
-            self.index.add(feats.cpu().numpy().astype(np.float32))
-
-            all_labels.append(labels)
-
-        self.train_labels = torch.cat(all_labels, dim=0).long()
-
-        assert self.train_labels.shape[0] == self.index.ntotal, \
-            "Mismatch between FAISS vectors and labels!"
-
-    def predict(self, x: torch.Tensor):
-        """
-        Predict labels for a batch of test embeddings.
-        """
-        # 1. normalize and convert 
-        x = F.normalize(x, dim=1)
-        x_np = x.detach().cpu().numpy().astype(np.float32)
-
-        # 2. FAISS search, only care about indices, not distances
-        _, indices = self.index.search(x_np, self.k)
-
-        # 3. convert to torch
-        indices = torch.tensor(indices, dtype=torch.long)
+        _, indices = self.index.search(x, self.k)
 
         preds = []
 
-        # 4. pure torch indexing + python voting
-        for neighbors in indices:
-            neighbor_labels = self.train_labels[neighbors].tolist()
+        # vectorized majority voting
+        # axis=1 finds the mode along the rows (the k neighbors for each query)
+        def majority_vote(indices, labels):
+            preds = []
 
-            preds.append(
-                Counter(neighbor_labels).most_common(1)[0][0]
-            )
+            for neighbors in indices:
+                neighbor_labels = labels[neighbors]
+                preds.append(Counter(neighbor_labels.tolist()).most_common(1)[0][0])
 
-        return torch.tensor(preds, device=x.device, dtype=torch.long)
+            return np.array(preds)
 
-    def evaluate(self, test_feature_files, test_label_files):
-        '''
-        Evaluate the accuracy of KNN
-        '''
+        # extract the wining labels and flatten to a 1D list
+        # preds = voting_results.mode.ravel()
+        preds = majority_vote(indices, self.labels)
+
+        return preds
+
+    def eval(self, test_feats_file_path, test_labels_file_path, batch_size = 10000):
+        # test_index = faiss.read_index(test_index_file_path)
+
+        test_feats = torch.load(test_feats_file_path)
+        test_labels = torch.load(test_labels_file_path)
+
         correct = 0
-        total = 0
+        total = len(test_feats)
 
-        for feat_file, label_file in zip(test_feature_files, test_label_files):
-            feats = torch.load(feat_file)
-            labels = torch.load(label_file)
+        for start in range(0, total, batch_size):
 
-            preds = self.predict(feats)
+            end = min(start + batch_size, total)
 
-            correct += (preds == labels).sum().item()
-            total += labels.size(0)
+            batch_feats = test_feats[start:end]
 
-        acc = correct / total
-        return acc
+            preds = self.predict(batch_feats)
+
+            labels = test_labels[start:end].numpy()
+
+            correct += np.sum(preds == labels)
+
+        accuracy = correct / total
+
+        return accuracy

@@ -1,30 +1,55 @@
-from model.embedding_pipeline import create_data_loader, extract_features
-from eval.knn import FAISSKNN
-from pathlib import Path
-import glob
+import torch
+import faiss
+import numpy as np
+import timm
+import torch.nn.functional as F
+from PIL import Image
+from dataset_processing.dataset import CarImageDataset
+import requests
+from io import BytesIO
 
+index = faiss.read_index("train_index")
+labels = np.load("train_labels.npy")
 
-def main():
-    ROOT = Path(__file__).resolve().parents[1]  # adjust if needed
-    # train_dl, test_dl = create_data_loader(batch_size=64)
-    # extract_features(train_dl, test_dl)
+# test_image_filepath = "./car-dataset-200/hyundai/hyundai-accent/hyundai-accent-gen-2006-2011/hyundai-accent-gen-2006-2011-87.jpg"
 
-    DIM = 768
-    K = 5
+url = "https://images.hgmsites.net/lrg/2025-audi-q5-s-line-premium-55-tfsi-e-quattro-angular-front-exterior-view_100960946_l.webp"
 
-    knn = FAISSKNN(dim=DIM, k=K)
+response = requests.get(url)
+test_image = Image.open(BytesIO(response.content)).convert("RGB")
 
-    train_feats = sorted(ROOT.glob("features/train_batch_*.pt"))
-    train_labels = sorted(ROOT.glob("features/train_labels_*.pt"))
+K = 5
+MODEL_NAME = "vit_base_patch16_dinov3"
 
-    knn.fit(train_feats, train_labels)
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    test_feats = sorted(ROOT.glob("features/test_batch_*.pt"))
-    test_labels = sorted(ROOT.glob("features/test_labels_*.pt"))
+model = timm.create_model(
+    model_name= MODEL_NAME,
+    pretrained=True,
+    num_classes = 0
+).to(device)
 
-    acc = knn.evaluate(test_feats, test_labels)
+model = model.eval()
 
-    print(f"KNN accuracy (k={K}): {acc:.4f}")
+data_config = timm.data.resolve_model_data_config(model)
+transform = timm.data.create_transform(**data_config, is_training=False)
 
-if __name__ == "__main__":
-    main()
+# test_image = Image.open(test_image_filepath).convert("RGB")
+test_image = transform(test_image).unsqueeze(0).to(device)
+
+with torch.no_grad():
+    features = model(test_image)
+    features = F.normalize(features, p=2, dim=1)
+
+features = features.cpu().numpy().astype("float32")
+
+_, pred_indices = index.search(features, K)
+
+train_dl = CarImageDataset("dataset_meta.json")
+
+pred_class_ids = labels[pred_indices[0]]
+
+for class_id in pred_class_ids:
+    print(train_dl.id_to_class_name[int(class_id)])
+
+print(pred_indices)
