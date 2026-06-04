@@ -8,11 +8,9 @@ Split the dataset into train and test sets
 ========================================================
 '''
 
-
-INPUT_FILE = "./dataset_meta.json"
-
-TRAIN_SET_OUTPUT = "train_dataset.json"
-TEST_SET_OUTPUT = "test_dataset.json"
+INPUT_FILE = "data/json/dataset.json"
+TRAIN_SET_OUTPUT = "data/json/train_dataset.json"
+TEST_SET_OUTPUT = "data/json/test_dataset.json"
 
 SPLIT_RATIO = 0.8
 
