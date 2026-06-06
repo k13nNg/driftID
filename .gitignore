@@ -1,1 +1,13 @@
-/car-dataset-200
+/data
+./submit_job.sh
+/slurm_output_logs
+/features
+submit_job.sh
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.npy
+*.pt
+*.json
+train_index

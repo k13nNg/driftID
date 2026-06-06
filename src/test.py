@@ -1,44 +1,16 @@
-import os
-import re
-from collections import defaultdict
+from src.model.predictor import Predictor
 
-def audit_dataset(root_path):
-    # Regex to identify our target leaf folders
-    pattern = re.compile(r"([a-z0-9]+)-([a-z0-9-]+)(?:-gen)?-(\d{4})-(\d{4})")
-    
-    stats = []
-    total_images = 0
-    valid_extensions = ('.jpg', '.jpeg', '.png', '.webp', '.bmp', '.tiff')
+# image_url = "https://content-images.carmax.com/qeontfmijmzv/57EXFhA8LgZfkTMVt47yT/be10da5c5d69712e6794bb86b1b56d35/2025_Toyota_RAV4_Hybrid_XLE_Premium_53832_st2400_089.png?w=2100&fm=webp"
 
-    print(f"{'FOLDER NAME':<50} | {'COUNT':<6}")
-    print("-" * 60)
+# image_url = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSgVfHORQFLyUf_rNove-xUmxIskDeMJ63REz_YIMQ6S0vCyQdkBvJos4igKspvCgpqnpy8h0xM--1uckzZIxDgyoHy37-MowkF-YzvVx8&s=10"
 
-    for root, dirs, files in os.walk(root_path):
-        folder_name = os.path.basename(root)
-        match = pattern.search(folder_name)
+# image_url = "https://newsroom.porsche.com/.imaging/mte/porsche-templating-theme/teaser_700x395/dam/pnr/2024/Products/992-II/0840_nevada_coupe_u-crane_AKOS0607_edit_V03-sky.jpg/jcr:content/0840_nevada_coupe_u-crane_AKOS0607_edit_V03-sky.jpg"
 
-        if match:
-            # Count images in this specific folder
-            image_count = sum(1 for f in files if f.lower().endswith(valid_extensions))
-            total_images += image_count
-            
-            stats.append({
-                "folder": folder_name,
-                "count": image_count
-            })
-            
-            # Highlight potentially "suss" folders
-            alert = " <-- EMPTY?" if image_count == 0 else ""
-            print(f"{folder_name[:50]:<50} | {image_count:<6} {alert}")
+image_url = "https://hips.hearstapps.com/hmg-prod/images/2026-kia-sorento-101-6830c600433b3.jpg?crop=0.731xw:0.643xh;0.168xw,0.284xh&resize=1200:*"
 
-    print("-" * 60)
-    print(f"TOTAL IMAGES FOUND: {total_images}")
-    print(f"TOTAL VALID FOLDERS: {len(stats)}")
-    
-    # Optional: Find the average to spot anomalies
-    if stats:
-        avg = total_images / len(stats)
-        print(f"AVERAGE IMAGES PER FOLDER: {avg:.2f}")
+predictor = Predictor()
 
-# Run it
-audit_dataset('./car-dataset-200')
+results = predictor.predict_top_k(image_url, True)
+
+for r in results:
+    print(f"Class: {r['class']} | Probability: {r['confidence']}")
