@@ -5,21 +5,21 @@ import faiss
 import numpy as np
 import torch.nn.functional as F
 
-def extract_features(train_dl, model_name = "vit_base_patch16_dinov3"):
+def extract_features(dataloader, model_name = "vit_base_patch16_dinov3"):
     '''
     return vector embeddings (features) for training and test datasets
     '''
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    print("=" * 16)
+    # print("=" * 16)
 
-    print("CUDA available:", torch.cuda.is_available())
+    # print("CUDA available:", torch.cuda.is_available())
 
-    if torch.cuda.is_available():
-        print("GPU:", torch.cuda.get_device_name(0))
-        print("Device count:", torch.cuda.device_count())
+    # if torch.cuda.is_available():
+    #     print("GPU:", torch.cuda.get_device_name(0))
+    #     print("Device count:", torch.cuda.device_count())
 
-    print("=" * 16)
+    # print("=" * 16)
 
     # create a feature extractor using timm
     model = timm.create_model(
@@ -39,6 +39,7 @@ def extract_features(train_dl, model_name = "vit_base_patch16_dinov3"):
         dataset_size = len(loader.dataset)
         all_labels = np.empty(dataset_size, dtype = np.int32)
         current_idx=0
+        
         with torch.no_grad():
             for images, labels in tqdm(loader, desc = "Extracting features"):
                 images = images.to(device)
@@ -58,9 +59,9 @@ def extract_features(train_dl, model_name = "vit_base_patch16_dinov3"):
 
         return index, all_labels
 
-    train_features_index, train_labels = extract_batch_features(train_dl)
+    features_index, labels = extract_batch_features(dataloader)
 
-    return train_features_index, train_labels
+    return features_index, labels
 
 
                 

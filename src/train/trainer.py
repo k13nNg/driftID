@@ -57,9 +57,20 @@ def train_model(classifier,
     elapsed_mins = int(elapsed_time // 60)
     elapsed_secs = int(elapsed_time % 60)
 
-    # save the model params
-    torch.save(classifier.state_dict(), "linear_classifier.pt")
+    # # save the model params
+    # torch.save(classifier.state_dict(), "linear_classifier.pt")
+
+    # torch.save(
+    #     {
+    #         "model_state_dict": classifier.state_dict(),
+    #         "dim": DIM,
+    #         "num_classes": NUM_CLASSES,
+    #     },
+    #     "linear_classifier.pt"
+    # )
 
     print(f"Finished training the model in {elapsed_mins}m {elapsed_secs}s")
+    return classifier
+
 
 

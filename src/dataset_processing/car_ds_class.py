@@ -1,5 +1,3 @@
-from collections import defaultdict
-import os
 import json
 from torch.utils.data import Dataset
 from PIL import Image

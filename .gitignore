@@ -9,4 +9,5 @@ __pycache__/
 *.pyd
 *.npy
 *.pt
+*.json
 train_index
