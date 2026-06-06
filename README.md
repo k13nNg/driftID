@@ -68,3 +68,6 @@ At a high level, the system works as follows:
   - **Classifier:** Linear layer trained on frozen embeddings (Following the strategy outlined in [this article](https://pub.towardsai.net/harness-dinov2-embeddings-for-accurate-image-classification-f102dfd35c51))
   - **Loss function:** Cross-entropy loss
   - **Training strategy:** Feature extraction + supervised fine-tuning on labeled car dataset
+
+# 📚 Citations
+  - https://pub.towardsai.net/harness-dinov2-embeddings-for-accurate-image-classification-f102dfd35c51
