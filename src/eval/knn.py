@@ -6,19 +6,21 @@ import torch.nn.functional as F
 from scipy.stats import mode
 
 class KNN:
+    """
+    Implementation of KNN class to evaluate the cold embeddings quality of DINOv3, using FAISS retrieval method
+    """
     def __init__(self, k, index_file_path, labels_file_path):
         self.index = faiss.read_index(index_file_path)
         self.labels = np.load(labels_file_path)
         self.k = k
 
     def predict(self, x):
+        """
+        predict k car classes that are nearest to x
+        """
         # normalize x before searching
         x = F.normalize(x, dim = 1)
         x = x.detach().cpu().numpy().astype('float32')
-
-        # x= x.astype("float32")
-
-        x = x /np.linalg.norm(x, axis = 1, keepdims= True)
 
         _, indices = self.index.search(x, self.k)
 
@@ -42,8 +44,9 @@ class KNN:
         return preds
 
     def eval(self, test_feats_file_path, test_labels_file_path, batch_size = 10000):
-        # test_index = faiss.read_index(test_index_file_path)
-
+        """
+        Evaluate the retrieval quality based on the test dataset
+        """
         test_feats = torch.load(test_feats_file_path)
         test_labels = torch.load(test_labels_file_path)
 

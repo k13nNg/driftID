@@ -1,8 +1,10 @@
 import os
 import re
-from collections import defaultdict
 
 def audit_dataset(root_path):
+    """
+    Check the total number of images in the dataset, as well as average images per folder, to make sure we didn't miss any thing in the download process
+    """
     # Regex to identify our target leaf folders
     pattern = re.compile(r"([a-z0-9]+)-([a-z0-9-]+)(?:-gen)?-(\d{4})-(\d{4})")
     
