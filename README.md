@@ -1,6 +1,6 @@
 # 🚗 DriftID
 
-# 🧾 Overview
+# 🚀 Overview
 
 This project is an _end-to-end machine learning application_ that identifies the make and model of a car from an uploaded image.
 
