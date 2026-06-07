@@ -9,7 +9,7 @@ Given a user-submitted image, the system extracts visual features using a pretra
 The goal is to demonstrate a practical computer vision pipeline combining deep feature extraction, similarity search/classification, and deployment-ready inference code.
 
 # 🛠️ Development Setup Guide
-1. Make sure [Anaconda](https://www.anaconda.com/download) is installed
+1. Make sure [Miniconda]([https://www.anaconda.com/download](https://www.anaconda.com/docs/getting-started/miniconda/install/overview)) is installed
 2. Clone the repo
 3. Navigate to the `root` folder of the repo
 4. Run the following line of code to setup the virtual environment
