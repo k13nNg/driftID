@@ -1,4 +1,4 @@
-/data
+/data/car-dataset-200
 ./submit_job.sh
 /slurm_output_logs
 /features
