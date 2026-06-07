@@ -14,7 +14,7 @@ The goal is to demonstrate a practical computer vision pipeline combining deep f
 3. Navigate to the `root` folder of the repo
 4. Run the following line of code to setup the virtual environment
    ```bash
-   conda env --file env.taml
+   conda env --file env.yaml
    ```
 5. Run the following line of code to activate the virtual environment
    ```bash
