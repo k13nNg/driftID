@@ -8,6 +8,22 @@ Given a user-submitted image, the system extracts visual features using a pretra
 
 The goal is to demonstrate a practical computer vision pipeline combining deep feature extraction, similarity search/classification, and deployment-ready inference code.
 
+# 🛠️ Development Setup Guide
+1. Make sure [Miniconda]([https://www.anaconda.com/download](https://www.anaconda.com/docs/getting-started/miniconda/install/overview)) is installed
+2. Clone the repo
+3. Navigate to the `root` folder of the repo
+4. Run the following line of code to setup the virtual environment
+   ```bash
+   conda env --file env.yaml
+   ```
+5. Run the following line of code to activate the virtual environment
+   ```bash
+   conda activate gpu-env
+   ```
+6. You are now all setup for development! The file `test.py` in `src` contains an example of how to interact with the model
+
+**Note:** The original dataset (`car-dataset-200`, which contains car images) is no longer needed at this stage of development, as all image features are extracted and stored in the `/train` and `/test` folders in `/data`
+
 # 📊 Dataset
 
 This project uses the Car Make, Model, and Generation dataset from Kaggle, which contains labeled images of vehicles across multiple manufacturers, models, and production years.
