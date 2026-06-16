@@ -39,54 +39,37 @@ class Predictor:
         with open(ROOT / "data" / "artifacts" / "classes.json") as f:
             self.classes = json.load(f)
 
-    def extract_features(self, image_path, is_url):
-        """
-        Generate and return the embedding of the image
-        """
-        if (is_url):
-            """
-            check if image_path is an Internet URL, in which case we would have
-            to some more processing
-            """
-            response = requests.get(image_path)
-            # debug code to catch 404 or 403 errors
-            response.raise_for_status()
-            image = Image.open(BytesIO(response.content))
-
-        else:
-            """
-            image_path is a file path => Open it directly
-            """
-            image = Image.open(image_path)
-
-
+    def _embed_pil(self, image: Image.Image):
         if image.mode == "P":
             image = image.convert("RGBA")
 
         image = image.convert("RGB")
-
         image = self.transform(image)
-        image = image.unsqueeze(0).to(DEVICE)
+        image = image.unsqueeze(0).to(self.device)
 
         with torch.no_grad():
-            embedding = self.feature_extractor(image)
+            return self.feature_extractor(image)
 
-        return embedding
+    def extract_features(self, image_path, is_url):
+        """
+        Generate and return the embedding of the image
+        """
+        if is_url:
+            response = requests.get(image_path)
+            response.raise_for_status()
+            image = Image.open(BytesIO(response.content))
+        else:
+            image = Image.open(image_path)
 
-    def predict_top_k(self, image_path, is_url, k = 5):
-        """
-        Return k car classes with the highest probabilities
-        """
-        embedding = self.extract_features(image_path, is_url)
+        return self._embed_pil(image)
+
+    def _top_k_from_embedding(self, embedding, k):
         results = []
 
         with torch.no_grad():
             logits = self.classifier(embedding)
-
-            probs = torch.softmax(logits, dim = 1)
-
-            top_preds, top_indices = torch.topk(probs, k = k, dim = 1)
-
+            probs = torch.softmax(logits, dim=1)
+            top_preds, top_indices = torch.topk(probs, k=k, dim=1)
 
             for prob, idx in zip(top_preds[0], top_indices[0]):
                 results.append({
@@ -95,3 +78,17 @@ class Predictor:
                 })
 
         return results
+
+    def predict_from_image(self, image: Image.Image, k=5):
+        """
+        Return k car classes with the highest probabilities from a PIL image.
+        """
+        embedding = self._embed_pil(image)
+        return self._top_k_from_embedding(embedding, k)
+
+    def predict_top_k(self, image_path, is_url, k=5):
+        """
+        Return k car classes with the highest probabilities
+        """
+        embedding = self.extract_features(image_path, is_url)
+        return self._top_k_from_embedding(embedding, k)
