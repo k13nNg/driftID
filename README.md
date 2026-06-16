@@ -42,6 +42,59 @@ python src/test.py
 
 **Note:** The original dataset (`car-dataset-200`, which contains car images) is no longer needed at this stage of development, as all image features are extracted and stored in the `/train` and `/test` folders in `/data`
 
+# 🌐 REST API
+
+A FastAPI server (`src/api/server.py`) wraps the `Predictor` so a browser frontend can run inference over HTTP without importing Python or PyTorch. The model is loaded once at startup.
+
+Start the server:
+
+```bash
+conda activate gpu-env
+uvicorn src.api.server:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Interactive API docs are available at [http://localhost:8000/docs](http://localhost:8000/docs).
+
+> **Note:** The first startup takes a couple of minutes while the DINOv3 backbone loads. The server only accepts requests once it logs `Application startup complete`.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/health` | Liveness check → `{"status": "ok"}` |
+| `POST` | `/predict?k=5` | Identify a car from an uploaded image (multipart form, field `file`) |
+| `POST` | `/predict-url` | Identify a car from an image URL (JSON `{"url": ..., "k": 5}`) |
+
+`k` sets how many predictions to return (default `5`, max `20`).
+
+Image upload:
+
+```bash
+curl -X POST "http://localhost:8000/predict?k=5" \
+  -F "file=@/path/to/car.jpg"
+```
+
+Image URL:
+
+```bash
+curl -X POST http://localhost:8000/predict-url \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://example.com/car.jpg", "k": 5}'
+```
+
+Both endpoints return the same shape:
+
+```json
+{
+  "predictions": [
+    {"class": "porsche_cayenne-gen_2017_2021", "confidence": 0.58},
+    {"class": "landrover_rangeroversport-gen_2013_2021", "confidence": 0.27}
+  ]
+}
+```
+
+Errors are returned as JSON `{"detail": "..."}` (no stack traces): `400` for an invalid/unreadable image or unreachable URL, `500` for an unexpected inference failure. CORS is enabled for local frontend development.
+
 # 📊 Dataset
 
 This project uses the Car Make, Model, and Generation dataset from Kaggle, which contains labeled images of vehicles across multiple manufacturers, models, and production years.
