@@ -9,7 +9,25 @@ Given a user-submitted image, the system extracts visual features using a pretra
 The goal is to demonstrate a practical computer vision pipeline combining deep feature extraction, similarity search/classification, and deployment-ready inference code.
 
 # 🛠️ Development Setup Guide
-1. Make sure [Miniconda]([https://www.anaconda.com/download](https://www.anaconda.com/docs/getting-started/miniconda/install/overview)) is installed
+
+## Dev container
+
+1. Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) and the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) in VS Code / Cursor
+2. Clone the repo and open it in the editor
+3. Run **Dev Containers: Reopen in Container** from the command palette
+4. The `gpu-env` conda environment is built into the container image from `.devcontainer/environment.yml` (PyTorch, faiss, etc. via conda-forge). `PYTHONPATH` points at the repo root.
+
+The first build takes a few minutes while Docker downloads packages; later opens are fast.
+
+Example inference:
+
+```bash
+python src/test.py
+```
+
+## Local conda setup
+
+1. Make sure [Miniconda](https://www.anaconda.com/docs/getting-started/miniconda/install/overview) is installed
 2. Clone the repo
 3. Navigate to the `root` folder of the repo
 4. Run the following line of code to setup the virtual environment
