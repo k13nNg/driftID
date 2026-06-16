@@ -45,7 +45,7 @@ Work is planned in `bookkeeping/task_management/`:
 - Some acceptance criteria are **Human:** (reviewer sign-off) — do not mark done without explicit approval.
 - When implementing work, follow the active task spec; update checkboxes only when criteria are actually met.
 
-**Active sprint:** [S001 — Setup Dependencies](bookkeeping/task_management/S001.md) — FastAPI (T001), Flutter Web scaffold + Playwright smoke (T002), DriftID UI + demo recordings (T003).
+**Active sprint:** [S001 — Setup Dependencies](bookkeeping/task_management/S001.md) — dev container deps (T000), FastAPI (T001), Flutter Web scaffold + Playwright smoke (T002), DriftID UI + demo recordings (T003).
 
 ## Engineering guidelines
 
