@@ -13,6 +13,9 @@ dependencies:
   - tqdm
   - pyyaml
   - requests
+  - fastapi
+  - uvicorn
+  - python-multipart
   - pip
   - pip:
       - timm==1.0.27
