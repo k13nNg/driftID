@@ -4,6 +4,7 @@ USER root
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
+    chromium \
     curl \
     git \
     unzip \
@@ -11,6 +12,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     zip \
     libglu1-mesa \
     && rm -rf /var/lib/apt/lists/*
+
+ENV CHROME_EXECUTABLE=/usr/bin/chromium
 
 RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - \
     && apt-get install -y --no-install-recommends nodejs \

@@ -30,7 +30,8 @@
     }
   },
   "remoteEnv": {
-    "PYTHONPATH": "${containerWorkspaceFolder}"
+    "PYTHONPATH": "${containerWorkspaceFolder}",
+    "CHROME_EXECUTABLE": "/usr/bin/chromium"
   },
   "postCreateCommand": "bash -lc 'source /opt/conda/etc/profile.d/conda.sh && conda activate gpu-env && python -c \"import torch, timm, faiss; print(\\\"Environment ready:\\\", torch.__version__)\"'; if command -v flutter >/dev/null; then flutter doctor; fi; if [ -f ui/package.json ]; then cd ui && flutter pub get && npm ci && npx playwright install chromium; fi"
 }
