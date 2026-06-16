@@ -1,0 +1,5 @@
+.git
+.DS_Store
+Miniconda3-latest-*.sh
+__pycache__
+*.pyc
