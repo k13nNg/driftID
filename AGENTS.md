@@ -23,19 +23,48 @@ src/
 data/
   artifacts/      # classes.json, model weights
   json/           # train/test dataset manifests
-bookkeeping/stories/  # product user stories and backlog
+bookkeeping/
+  stories/          # product user stories and personas
+  task_management/  # sprints (S###.md), tasks (T###.md), templates
+ui/                 # Flutter Web frontend (when implemented)
 ```
 
-## Current focus
+## Task management
 
-The ML pipeline is considered **done**. Prioritize product and inference UX per `bookkeeping/stories/user-stories.md`:
+Work is planned in `bookkeeping/task_management/`:
 
-- Image upload and URL input
-- Top-k predictions with confidence
-- Loading states and user-facing errors (no stack traces in UI)
-- Clear make/model labels from `data/artifacts/classes.json`
+| File | Purpose |
+|------|---------|
+| `S###.md` | **Sprint** — goal, task list, sprint-level acceptance criteria |
+| `T###.md` | **Task** — implementation spec for one deliverable |
+| `template-sprint.md` | Copy to create a new sprint |
+| `template-task.md` | Copy to create a new task |
 
-**Out of scope unless asked:** retraining, new architectures, dataset splitting, production deployment (auth, rate limits).
+- User stories live in `bookkeeping/stories/user-stories.md` (`US-##`); sprints/tasks reference them under **Maps to**.
+- Tasks may declare **Depends on** other tasks; respect ordering.
+- Some acceptance criteria are **Human:** (reviewer sign-off) — do not mark done without explicit approval.
+- When implementing work, follow the active task spec; update checkboxes only when criteria are actually met.
+
+**Active sprint:** [S001 — Setup Dependencies](bookkeeping/task_management/S001.md) — FastAPI (T001), Flutter Web scaffold + Playwright smoke (T002), DriftID UI + demo recordings (T003).
+
+## Engineering guidelines
+
+**Before implementing product or UX work**, read these in order:
+
+1. **`bookkeeping/stories/user-stories.md`** — product intent and acceptance criteria (`US-##`). This is the source of truth for *what* users need.
+2. **The relevant `S###.md`** — sprint goal, task breakdown, architecture, and sprint-level scope. Confirms *which slice* of the backlog is in flight and how tasks fit together.
+3. **The relevant `T###.md`** — implementation spec for the task at hand: approach, files, run commands, and task acceptance criteria. This is the source of truth for *how* to build and *when* the task is done.
+
+If the task lists **Depends on**, read those `T###.md` files too — do not skip prerequisite work.
+
+While coding:
+
+- Implement only what the task spec and mapped user stories require; do not pull in **Out of scope** items from the sprint or task.
+- Verify each acceptance criterion in the task (and sprint, where applicable) before marking checkboxes or reporting the task complete.
+- Leave **Human:** criteria unchecked until a reviewer explicitly approves.
+
+If the user’s request does not map to an existing task, say so and ask whether to extend a task or add a new `T###.md` (from `template-task.md`) before building.
+
 
 ## UI requirements
 
@@ -54,6 +83,6 @@ The ML pipeline is considered **done**. Prioritize product and inference UX per 
 
 - Prefer small, focused diffs
 - Reuse `Predictor.predict_top_k` for inference behavior; UI should mirror its output
+- New sprints/tasks: copy `template-sprint.md` / `template-task.md`, rename to `S###.md` / `T###.md`, link from the parent sprint’s task table
 - Do not commit secrets, `.env`, or large binary artifacts
 - Only create git commits when explicitly requested
-
