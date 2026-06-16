@@ -16,6 +16,8 @@ dependencies:
   - fastapi
   - uvicorn
   - python-multipart
+  - pytest
+  - httpx
   - pip
   - pip:
       - timm==1.0.27
