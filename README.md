@@ -8,6 +8,35 @@ Given a user-submitted image, the system extracts visual features using a pretra
 
 The goal is to demonstrate a practical computer vision pipeline combining deep feature extraction, similarity search/classification, and deployment-ready inference code.
 
+# ⚡ Quickstart
+
+**1. Open in the dev container**
+
+1. Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) and the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) in VS Code / Cursor
+2. Clone the repo and open it in the editor
+3. Run **Dev Containers: Reopen in Container** from the command palette (the first build takes a few minutes)
+
+**2. Start the backend API** (terminal 1):
+
+```bash
+conda activate gpu-env
+uvicorn src.api.server:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Wait until it logs `Application startup complete` (the first start loads the DINOv3 backbone and takes a couple of minutes).
+
+**3. Start the frontend UI** (terminal 2):
+
+```bash
+cd ui
+flutter pub get          # first run only
+flutter run -d web-server --web-port 8080
+```
+
+Open [http://localhost:8080](http://localhost:8080), upload a car image, and view the top-k predictions.
+
+> See [REST API](#-rest-api) and [Frontend (Flutter Web UI)](#-frontend-flutter-web-ui) below for more detail.
+
 # 🛠️ Development Setup Guide
 
 ## Dev container
@@ -94,6 +123,33 @@ Both endpoints return the same shape:
 ```
 
 Errors are returned as JSON `{"detail": "..."}` (no stack traces): `400` for an invalid/unreadable image or unreachable URL, `500` for an unexpected inference failure. CORS is enabled for local frontend development.
+
+# 🖥️ Frontend (Flutter Web UI)
+
+The `ui/` folder contains a [Flutter](https://docs.flutter.dev/) Web app that provides an image-upload interface for running inference against the REST API. The dev container ships with the Flutter SDK and Chromium preconfigured (`CHROME_EXECUTABLE`).
+
+The UI talks to the FastAPI backend, so **start the API first** (see [REST API](#-rest-api) above), then launch the UI in a separate terminal.
+
+```bash
+cd ui
+flutter pub get                              # fetch dependencies (first run only)
+flutter run -d web-server --web-port 8080    # serve at http://localhost:8080
+```
+
+Open [http://localhost:8080](http://localhost:8080) in a browser, upload a car image (or paste an image URL), and the app displays the top-k predictions with confidence scores.
+
+The UI defaults to the backend at `http://localhost:8000`. To point it at a different host, override `API_BASE_URL` at build/run time:
+
+```bash
+flutter run -d web-server --web-port 8080 --dart-define=API_BASE_URL=http://localhost:8000
+```
+
+To produce a static release build (e.g. for hosting or the Playwright smoke tests):
+
+```bash
+flutter build web                                       # output in ui/build/web
+python3 -m http.server 8080 --directory build/web       # serve the build
+```
 
 # 📊 Dataset
 
