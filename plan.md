@@ -32,6 +32,12 @@ Non-negotiables:
 - For hands-on solo work. **No change needed.**
 
 ### B. Orchestrator mode (no bind-mount) — new
+- **`orchestrate.sh` runs on the host** (Docker Desktop), not inside the dev container — the
+  dev container has no Docker daemon. It drives `docker run`/`docker rm` on the host.
+- **No published ports (`-p`).** Each task is its own container with its own network namespace,
+  so in-container ports never collide across tasks — they stay constant (`API_PORT=8000`,
+  `WEB_PORT=8080`). Reach the app/API via VS Code/Cursor **"Attach to Running Container"**
+  (it forwards container ports and resolves host-side collisions automatically).
 - Launched by the orchestrator via `docker run` from `driftid-sprint:S###`, **no source mount**.
 - Source lives on a **[LOCKED] per-task named Docker volume** (`driftid-<T###>`) mounted at
   `/workspaces/driftID` — survives `docker rm`, re-attachable, crash-safe; `down` removes it.
@@ -57,6 +63,12 @@ base       (current Dockerfile: conda, Flutter SDK, Playwright)            ← r
 ```
 Worker image = `driftid-sprint:S###`. Auth (gh token) injected at runtime, never baked.
 
+> Header note (decided): orchestrator runs **host-side**; containers are **attach-only** (no `-p`),
+> so per-task port derivation is dropped and in-container ports stay constant. Repo is **private** —
+> `SprintBase` must clone the seed with a build-time token (BuildKit `--mount=type=secret`, not baked),
+> and warm the **timm/HF DINOv3 backbone download** (`features_extractor.py`), not `data/artifacts/`
+> (already committed in git).
+
 ## Action items
 
 ### 1. Publish the base/dev toolchain image
@@ -81,12 +93,11 @@ Worker image = `driftid-sprint:S###`. Auth (gh token) injected at runtime, never
 
 ### 4. Orchestrator script (`orchestrate.sh`)
 - [ ] `up <T###>`:
-  - [ ] Ensure branch `task/<T###>` (or `<owner>/T<id>` per repo convention) exists; create from main if missing.
-  - [ ] **[LOCKED]** Derive `N` from the numeric part of `T###`; export `API_PORT=8000+N`,
-        `WEB_PORT=9000+N` (3-digit `T###` ⇒ ranges 8000–8999 / 9000–9999 never overlap).
+  - [ ] Ensure branch `<owner>/T<id>` (repo convention, e.g. `rayw/T005`) exists; create from main if missing.
   - [ ] Create/reuse named volume `driftid-<T###>`; mount at `/workspaces/driftID`.
-  - [ ] `docker run -d --name driftid-<T###> -v driftid-<T###>:/workspaces/driftID -e API_PORT -e WEB_PORT
-        --env GH_TOKEN driftid-sprint:S###` (named volume only — **no host source mount**; auth via env).
+  - [ ] `docker run -d --name driftid-<T###> -v driftid-<T###>:/workspaces/driftID
+        --env GH_TOKEN driftid-sprint:S###` (named volume only — **no host source mount**, **no `-p`**;
+        auth via env). Constant in-container ports (8000/8080); reach via "Attach to Running Container".
   - [ ] Entrypoint: if volume empty, seed from `/opt/seed/driftID` (`git clone --reference` + copy warm
         build dirs) → `git fetch && git switch main && git pull --ff-only` → incremental warm build.
 - [ ] `down <T###>`: stop+remove container; **remove the `driftid-<T###>` volume**; warn/guard if the
@@ -99,10 +110,13 @@ Worker image = `driftid-sprint:S###`. Auth (gh token) injected at runtime, never
 - [ ] The skill then owns: branch off main → implement → `flutter analyze`/`test` + Playwright demos →
       tick criteria → move task to `done/` → commit, push, open PR (uses the injected `GH_TOKEN`).
 
-### 6. Port-aware app config
-- [ ] `uvicorn` binds to `API_PORT` (env, default 8000).
-- [ ] Flutter web dev server + Playwright `baseURL` read `WEB_PORT` / `API_PORT` from env.
-- [ ] No hardcoded `:8000` / `:9000` left in UI or test config.
+### 6. Port-aware app config — DONE (env-driven, defaults preserved)
+- [x] `uvicorn` binds to `API_PORT` (env, default 8000) — `python -m src.api.server` honors `$API_PORT`.
+- [x] Flutter web build + Playwright `baseURL`/`webServer` read `WEB_PORT` / `API_PORT` from env
+      (`ui/playwright.config.ts`); the web build is pinned to `API_BASE_URL=http://localhost:$API_PORT`.
+- [x] No hardcoded `:8000` / `:8080` left in test config; `api_client.dart` already uses the
+      configurable `--dart-define=API_BASE_URL` (default `http://localhost:8000`).
+- Note: attach-only model ⇒ ports stay constant per container; **no** `8000+N`/`9000+N` derivation.
 
 ### 7. Merge / teardown flow
 - [ ] Worker (via `implement-task`) pushes `task/<T###>` and opens the PR.
@@ -116,14 +130,19 @@ Worker image = `driftid-sprint:S###`. Auth (gh token) injected at runtime, never
 ## Decisions locked
 - **Persistence:** per-task **named Docker volume** (`driftid-<T###>`) — survives `docker rm`,
   re-attachable, crash-safe; `down` removes it.
-- **Ports:** **derive from `T###`** — `API_PORT=8000+N`, `WEB_PORT=9000+N`, stateless & deterministic.
+- **Ports:** **constant per container** (`API_PORT=8000`, `WEB_PORT=8080`), env-driven so they stay
+  overridable. No host publishing (`-p`) and no `T###`-derivation — each container is network-isolated
+  and reached via "Attach to Running Container".
+- **Orchestrator host:** `orchestrate.sh` runs **on the host** (Docker Desktop); the dev container has
+  no daemon.
 - **Warm seed:** `SprintBase` bakes a **pinned end-of-sprint commit** + pre-built artifacts at
   `/opt/seed/driftID`; it is a seed only — the worker `git fetch && checkout main` on top. Rebuilt
   once per sprint. Seed path ≠ workspace path (volume would shadow it).
 
 ## Open questions
-- [ ] Registry: GHCR assumed — confirm.
+- [ ] Registry: GHCR assumed (owner `k13nNg`, private images) — confirm.
 - [ ] Remote for push/pull in orchestrator mode: the real origin, or a bare local repo on the host?
+      (Origin fetch is SSH, push is HTTPS today — the container should use HTTPS + `GH_TOKEN`.)
 
 ## Explicitly out of scope (for now)
 - GPU scheduling (env is CPU-only: `faiss-cpu` + CPU PyTorch — no contention).

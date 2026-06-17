@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 from io import BytesIO
 
@@ -91,3 +92,15 @@ async def predict_url(body: PredictUrlRequest):
         )
 
     return {"predictions": predictions}
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    # Bind to API_PORT so each orchestrator container (and local runs) can run on
+    # an isolated port without editing code. Defaults to 8000 to match docs.
+    uvicorn.run(
+        "src.api.server:app",
+        host="0.0.0.0",
+        port=int(os.environ.get("API_PORT", "8000")),
+    )
