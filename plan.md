@@ -88,8 +88,10 @@ Worker image = `driftid-sprint:S###`. Auth (gh token) injected at runtime, never
       BuildKit secret, remote rewritten tokenless after clone.
 - [x] Warm builds against the seed: `flutter pub get`, `flutter build web`, and pre-download the
       timm/HF DINOv3 backbone into `~/.cache` (artifacts are already in git via the full clone).
-- [ ] Build + tag per sprint: `./orchestrate.sh build-sprint S### <ref> [--push]` (run once per sprint).
-- [x] **Never** bake auth/secrets; seed path is `/opt/seed/driftID`, not `/workspaces/driftID`.
+- [x] Build + tag per sprint: `./orchestrate.sh build-sprint S### <ref> [--push]` (run once per sprint).
+      S002 built + pushed → `ghcr.io/raywang999/driftid-sprint:S002` (seed pinned to `6ecafb8`, ~10.9 GB).
+- [x] **Never** bake auth/secrets; seed path is `/opt/seed/driftID`, not `/workspaces/driftID`
+      (also dropped `set -x` so the clone token isn't echoed to the build log).
 
 ### 3. CI to keep images fresh (optional but recommended)
 - [x] GH Action (`.github/workflows/images.yml`): rebuild + push `driftid-dev` on dep-file changes;

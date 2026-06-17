@@ -107,9 +107,11 @@ ARG SPRINT_REF=main
 ARG REPO_URL=https://github.com/k13nNg/driftID.git
 
 USER root
-# A vscode-owned mountpoint so a fresh per-task named volume inherits vscode
-# ownership (Docker seeds an empty named volume's perms from the image path).
-RUN mkdir -p /workspaces/driftID && chown -R vscode:vscode /workspaces
+# vscode-owned mountpoints. /workspaces so a fresh per-task named volume inherits
+# vscode ownership (Docker seeds an empty named volume's perms from the image
+# path); /opt/seed so the (non-root) vscode user can clone the seed into it.
+RUN mkdir -p /workspaces/driftID /opt/seed \
+    && chown -R vscode:vscode /workspaces /opt/seed
 COPY .devcontainer/orchestrator-entrypoint.sh /usr/local/bin/orchestrator-entrypoint.sh
 RUN chmod +x /usr/local/bin/orchestrator-entrypoint.sh
 
@@ -118,11 +120,11 @@ USER vscode
 # Clone the pinned ref into the seed path using a build-time token secret. The
 # token is read only from the secret mount; the stored remote is rewritten to a
 # tokenless URL so nothing sensitive lands in an image layer. FULL clone (NOT
-# --depth 1) so the worker keeps history for switch/pull/diff.
+# --depth 1) so the worker keeps history for switch/pull/diff. NOTE: no `set -x`
+# around the token so it never gets echoed into the build log.
 RUN --mount=type=secret,id=gh_token,uid=1000,mode=0400 \
-    set -eux; \
-    GH_TOKEN="$(cat /run/secrets/gh_token)"; \
-    git clone "https://x-access-token:${GH_TOKEN}@${REPO_URL#https://}" /opt/seed/driftID; \
+    set -eu; \
+    git clone "https://x-access-token:$(cat /run/secrets/gh_token)@${REPO_URL#https://}" /opt/seed/driftID; \
     cd /opt/seed/driftID; \
     git checkout "${SPRINT_REF}"; \
     git remote set-url origin "${REPO_URL}"; \
