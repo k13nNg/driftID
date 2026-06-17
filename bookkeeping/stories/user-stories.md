@@ -4,72 +4,35 @@ Stories below cover product experience and inference UX. The ML pipeline (featur
 
 Format: **As a** [persona], **I want** [goal], **so that** [benefit].
 
+Each story lives in its own `US-##-*.md` file. Sprints and tasks reference stories by ID (e.g. `US-01`) under **Maps to**.
+
 ---
 
 ## Inference & results
 
-### US-01 — Upload a car image
-
-**As a** car enthusiast, **I want** to upload a car image from my device, **so that** I can identify the make and model without using the command line.
-
-**Acceptance criteria:**
-- [ ] UI accepts common image formats (e.g. JPEG, PNG, WebP)
-- [ ] User sees a preview of the uploaded image before or after inference
-- [ ] Invalid or non-image files show a clear error message
-
----
-
-### US-02 — Submit an image URL
-
-**As a** used-car shopper, **I want** to paste an image URL from a listing, **so that** I can check a car without downloading the photo first.
-
-**Acceptance criteria:**
-- [ ] UI accepts a valid HTTP(S) image URL
-- [ ] Broken, blocked, or non-image URLs surface a helpful error (not a stack trace)
-- [ ] Results match what `Predictor.predict_top_k` returns for the same URL
-
----
-
-### US-03 — View top-k predictions with confidence
-
-**As a** car enthusiast, **I want** to see the top several make/model predictions with confidence scores, **so that** I can judge how sure the system is and pick among similar models.
-
-**Acceptance criteria:**
-- [ ] At least top-5 predictions are shown, ordered by confidence
-- [ ] Each row shows human-readable make/model (from `classes.json`) and a confidence value
-- [ ] Highest-confidence prediction is visually emphasized
-
----
-
-### US-04 — Run inference in real time
-
-**As a** car enthusiast, **I want** inference to run shortly after I submit an image, **so that** the app feels responsive and I get answers quickly.
-
-**Acceptance criteria:**
-- [ ] Loading state is shown while the model runs
-- [ ] Typical single-image inference completes without a full page reload
-- [ ] Failures (model load, CUDA/CPU, bad input) show a user-facing message
-
----
+| Story | Persona | Introduced |
+|-------|---------|------------|
+| [US-01 — Upload a car image](US-01-upload-car-image.md) | Car enthusiast | S001 |
+| [US-02 — Submit an image URL](US-02-submit-image-url.md) | Used-car shopper | S001 |
+| [US-03 — View top-k predictions with confidence](US-03-view-top-k-predictions.md) | Car enthusiast | S001 |
+| [US-04 — Run inference in real time](US-04-real-time-inference.md) | Car enthusiast | S001 |
 
 ## Application experience
 
-### US-05 — Understand the app at a glance
+| Story | Persona | Introduced |
+|-------|---------|------------|
+| [US-05 — Understand the app at a glance](US-05-app-at-a-glance.md) | Used-car shopper | S001 |
+| [US-06 — Readable prediction labels](US-06-readable-prediction-labels.md) | Used-car shopper | S001 |
+| [US-07 — Navigate via a bottom tab bar](US-07-bottom-tab-navigation.md) | Car enthusiast | S002 |
 
-**As a** used-car shopper, **I want** a short explanation of what DriftID does on the main screen, **so that** I know what to upload and what to expect.
+## History & revisiting
 
-**Acceptance criteria:**
-- [ ] One-line summary matches README intent (identify car make/model from an image)
-
----
-
-### US-06 — Readable prediction labels
-
-**As a** used-car shopper, **I want** prediction labels formatted clearly (make, model, year/generation when present), **so that** I can compare them to a listing title.
-
-**Acceptance criteria:**
-- [ ] Class strings are displayed as-is or parsed into consistent make / model / variant fields
-- [ ] Confidence is shown in an easy-to-scan format (e.g. percentage)
+| Story | Persona | Introduced |
+|-------|---------|------------|
+| [US-08 — Auto-save recent identifications](US-08-auto-save-recent-predictions.md) | Used-car shopper | S002 |
+| [US-09 — Browse past identifications](US-09-browse-prediction-history.md) | Used-car shopper | S002 |
+| [US-10 — Reopen a past result in full](US-10-reopen-past-result.md) | Car enthusiast | S002 |
+| [US-11 — Manage and clear history](US-11-manage-prediction-history.md) | Car enthusiast | S002 |
 
 ---
 
