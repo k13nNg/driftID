@@ -72,43 +72,54 @@ Worker image = `driftid-sprint:S###`. Auth (gh token) injected at runtime, never
 ## Action items
 
 ### 1. Publish the base/dev toolchain image
-- [ ] Build the `dev` target: `docker build --target dev -t driftid-dev:latest -f .devcontainer/Dockerfile .`
-- [ ] Tag for registry: `ghcr.io/<owner>/driftid-dev:<git-sha>` and `:latest`.
-- [ ] Push to GHCR (`gh auth token` / `docker login ghcr.io`).
-- [ ] Document the rebuild trigger: **only** rebuild/repush when `.devcontainer/Dockerfile`,
-      `.devcontainer/environment.yml`, `ui/package.json`, or `ui/package-lock.json` change.
+> Tooling shipped: `./orchestrate.sh build-dev [--push]` builds, tags (`:latest` + `:<git-sha>`),
+> and optionally pushes. CI (`.github/workflows/images.yml`) does the same on dep-file changes.
+> Pushed to GHCR namespace **`raywang999`** (GitHub account; auth via `docker login ghcr.io` + a
+> `write:packages` token). Package defaults to **private**.
+- [x] Build the `dev` target — `./orchestrate.sh build-dev`.
+- [x] Tag for registry: `ghcr.io/<owner>/driftid-dev:<git-sha>` and `:latest` (done by `build-dev`).
+- [x] Push to GHCR — `./orchestrate.sh build-dev --push` → `ghcr.io/raywang999/driftid-dev:{latest,00daaac}`.
+- [x] Document the rebuild trigger: CI `paths:` + README pin it to `.devcontainer/Dockerfile`,
+      `.devcontainer/environment.yml`, `ui/package.json`, `ui/package-lock.json`.
 
 ### 2. Add the `SprintBase` stage (warm seed per sprint)
-- [ ] New stage `FROM dev AS sprint-base` with `ARG SPRINT_REF` (the pinned end-of-sprint commit/tag).
-- [ ] Clone the pinned ref into **`/opt/seed/driftID`** — full or `--filter=blob:none`, **never `--depth 1`**
-      (the worker needs history for `git switch main && git pull` and diffs).
-- [ ] Warm builds against the seed: `flutter pub get`, any `build_runner`, `flutter build web`,
-      fetch model artifacts into `data/artifacts/`.
-- [ ] Build + tag per sprint: `driftid-sprint:S###`; push to GHCR.
-- [ ] **Never** bake auth/secrets; seed path is **not** `/workspaces/driftID` (volume would shadow it).
+- [x] New stage `FROM dev AS sprint-base` with `ARG SPRINT_REF` (pinned end-of-sprint commit/tag).
+- [x] Clone the pinned ref into **`/opt/seed/driftID`** — **full clone** (NOT `--depth 1`), token via
+      BuildKit secret, remote rewritten tokenless after clone.
+- [x] Warm builds against the seed: `flutter pub get`, `flutter build web`, and pre-download the
+      timm/HF DINOv3 backbone into `~/.cache` (artifacts are already in git via the full clone).
+- [ ] Build + tag per sprint: `./orchestrate.sh build-sprint S### <ref> [--push]` (run once per sprint).
+- [x] **Never** bake auth/secrets; seed path is `/opt/seed/driftID`, not `/workspaces/driftID`.
 
 ### 3. CI to keep images fresh (optional but recommended)
-- [ ] GH Action: rebuild + push `driftid-dev` on dep-file changes; cache Docker layers.
-- [ ] At sprint close, build + push `driftid-sprint:S###` from the pinned ref.
+- [x] GH Action (`.github/workflows/images.yml`): rebuild + push `driftid-dev` on dep-file changes;
+      Docker layer cache via `type=gha`.
+- [x] At sprint close, `workflow_dispatch` builds + pushes `driftid-sprint:S###` from a pinned `ref`
+      (uses `GITHUB_TOKEN` as the clone secret).
 
 ### 4. Orchestrator script (`orchestrate.sh`)
-- [ ] `up <T###>`:
-  - [ ] Ensure branch `<owner>/T<id>` (repo convention, e.g. `rayw/T005`) exists; create from main if missing.
-  - [ ] Create/reuse named volume `driftid-<T###>`; mount at `/workspaces/driftID`.
-  - [ ] `docker run -d --name driftid-<T###> -v driftid-<T###>:/workspaces/driftID
-        --env GH_TOKEN driftid-sprint:S###` (named volume only — **no host source mount**, **no `-p`**;
+- [x] `up <T###>`:
+  - [~] ~~Ensure branch exists~~ — **dropped on purpose**: `implement-task` (step 2) creates the
+        `<owner>/T###` branch with `git switch -c`, so pre-creating it would make that fail. The
+        entrypoint lands the workspace on `main`; the worker branches.
+  - [x] Create/reuse named volume `driftid-<T###>`; mount at `/workspaces/driftID`.
+  - [x] `docker run -d --name driftid-<T###> -v driftid-<T###>:/workspaces/driftID
+        -e GH_TOKEN ... driftid-sprint:S###` (named volume only — **no host source mount**, **no `-p`**;
         auth via env). Constant in-container ports (8000/8080); reach via "Attach to Running Container".
-  - [ ] Entrypoint: if volume empty, seed from `/opt/seed/driftID` (`git clone --reference` + copy warm
+  - [x] Entrypoint: if volume empty, seed from `/opt/seed/driftID` (`git clone --reference` + copy warm
         build dirs) → `git fetch && git switch main && git pull --ff-only` → incremental warm build.
-- [ ] `down <T###>`: stop+remove container; **remove the `driftid-<T###>` volume**; warn/guard if the
-      branch has unpushed commits before destroying the volume.
-- [ ] `ls`: list active task containers + assigned port blocks.
-- [ ] `attach <T###>`: print the container name / connect hint for "Attach to Running Container".
+- [x] `down <T###>`: stop+remove container; remove the `driftid-<T###>` volume; **guards** dirty tree
+      and unpushed commits (`--force` to override) before destroying the volume.
+- [x] `ls`: list active task containers (ports are constant per container, not derived — see item 6).
+- [x] `attach <T###>`: prints the "Attach to Running Container" hint and opens a shell.
+- [x] `logs <T###>`: follow the warm-start output (bonus).
 
 ### 5. Worker handoff to `implement-task`
-- [ ] After the warm-start steps, the worker invokes the **`implement-task`** skill with the `T###`.
-- [ ] The skill then owns: branch off main → implement → `flutter analyze`/`test` + Playwright demos →
-      tick criteria → move task to `done/` → commit, push, open PR (uses the injected `GH_TOKEN`).
+- [x] After warm-start, the entrypoint prints the handoff (`run the implement-task skill for <TASK_ID>`)
+      and keeps the container alive (`sleep infinity`) for "Attach to Running Container".
+- [x] The skill then owns: branch off main → implement → `flutter analyze`/`test` + Playwright demos →
+      tick criteria → move task to `done/` → commit, push, open PR (uses the injected `GH_TOKEN`,
+      which the entrypoint wires into a git credential helper over HTTPS).
 
 ### 6. Port-aware app config — DONE (env-driven, defaults preserved)
 - [x] `uvicorn` binds to `API_PORT` (env, default 8000) — `python -m src.api.server` honors `$API_PORT`.
@@ -119,13 +130,16 @@ Worker image = `driftid-sprint:S###`. Auth (gh token) injected at runtime, never
 - Note: attach-only model ⇒ ports stay constant per container; **no** `8000+N`/`9000+N` derivation.
 
 ### 7. Merge / teardown flow
-- [ ] Worker (via `implement-task`) pushes `task/<T###>` and opens the PR.
+> Per-task runtime steps (run when a task is actually in flight). The teardown command + the
+> unpushed-work guard are shipped (`./orchestrate.sh down <T###>`).
+- [ ] Worker (via `implement-task`) pushes `<owner>/T<id>` (e.g. `rayw/T006`) and opens the PR.
 - [ ] Verify the task's `T###.md` acceptance criteria (leave **Human:** criteria for reviewer).
-- [ ] Merge → main; `orchestrate.sh down <T###>`.
+- [ ] Merge → main; `./orchestrate.sh down <T###>` (guard refuses if work is unpushed; `--force` overrides).
 
 ### 8. Docs
-- [ ] README section: image layers (base/dev → SprintBase), interactive vs orchestrator mode,
-      `up`/`down`/`attach`, port scheme, and the per-sprint `SprintBase` rebuild step.
+- [x] README **"Orchestrator mode (parallel tasks)"** section: image layers (base/dev → sprint-base),
+      interactive vs orchestrator mode, `up`/`down`/`ls`/`attach`/`logs`, constant-port scheme, and the
+      per-sprint `build-sprint` rebuild step.
 
 ## Decisions locked
 - **Persistence:** per-task **named Docker volume** (`driftid-<T###>`) — survives `docker rm`,
@@ -140,9 +154,11 @@ Worker image = `driftid-sprint:S###`. Auth (gh token) injected at runtime, never
   once per sprint. Seed path ≠ workspace path (volume would shadow it).
 
 ## Open questions
-- [ ] Registry: GHCR assumed (owner `k13nNg`, private images) — confirm.
-- [ ] Remote for push/pull in orchestrator mode: the real origin, or a bare local repo on the host?
-      (Origin fetch is SSH, push is HTTPS today — the container should use HTTPS + `GH_TOKEN`.)
+- [x] Registry: **GHCR**, owner `k13nng` (lowercased), private images. Overridable via
+      `REGISTRY` / `IMAGE_OWNER` env on `orchestrate.sh`. *(Confirm the owner casing if pushing fails.)*
+- [x] Remote for push/pull in orchestrator mode: **the real origin over HTTPS + `GH_TOKEN`**. The
+      entrypoint writes a `~/.git-credentials` helper and rewrites `origin` to the tokenless HTTPS URL,
+      so both fetch and push use the token (the SSH fetch URL isn't reachable in-container).
 
 ## Explicitly out of scope (for now)
 - GPU scheduling (env is CPU-only: `faiss-cpu` + CPU PyTorch — no contention).

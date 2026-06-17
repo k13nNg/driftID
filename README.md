@@ -54,6 +54,55 @@ Example inference:
 python src/test.py
 ```
 
+## Orchestrator mode (parallel tasks)
+
+The same dev container image runs two ways:
+
+| Mode | How it's launched | Source | Use |
+|------|-------------------|--------|-----|
+| **Interactive** | _Reopen in Container_ (above) | host workspace **bind-mounted** at `/workspaces/driftID` | hands-on solo work |
+| **Orchestrator** | `./orchestrate.sh up <T###>` (host) | per-task **named volume**, no host mount | running several `T###` tasks in parallel |
+
+The image is layered so the expensive toolchain stays cached:
+
+```
+base  (conda env, Flutter SDK, Playwright, Chromium)   ← rebuild only on dep changes
+ └─ dev  (+ gh CLI, warm npm/Playwright caches)         ← target used by the dev container
+     └─ sprint-base  (bakes a PINNED commit at /opt/seed/driftID + warm builds)  ← rebuilt per sprint
+```
+
+`base`/`dev` stay **code-free**; only `sprint-base` bakes a seed, and only as a warm
+start — a worker always `git fetch && switch main && pull` on top at runtime. Auth
+(`GH_TOKEN`) is injected at runtime, never baked into a layer.
+
+**Build the images** (host, needs a GitHub token for the private clone):
+
+```bash
+./orchestrate.sh build-dev                  # base/dev toolchain image
+./orchestrate.sh build-sprint S002 <ref>    # per-sprint warm seed (ref = pinned commit/tag)
+```
+
+Both accept `--push` to publish to GHCR (`ghcr.io/<owner>/driftid-{dev,sprint}`).
+Override `REGISTRY` / `IMAGE_OWNER` / `REPO_URL` via env if needed.
+
+**Run a task container:**
+
+```bash
+./orchestrate.sh up T006        # start a container off driftid-sprint:S###
+./orchestrate.sh logs T006      # follow the warm-start (seed → fetch → build)
+./orchestrate.sh ls             # list task containers
+./orchestrate.sh attach T006    # open a shell (or use Attach to Running Container)
+./orchestrate.sh down T006      # stop+remove; guards unpushed/uncommitted work
+```
+
+Containers publish **no ports** — each is network-isolated, so in-container ports stay
+constant (`API_PORT=8000`, `WEB_PORT=8080`). Reach the app/API by attaching with
+**Dev Containers: Attach to Running Container**, which forwards the ports for you.
+
+Persistence is `git push`: the named volume is the safety net, and `down` refuses to
+destroy a volume with unpushed commits unless you pass `--force`. Once attached, run the
+`implement-task` skill for the `T###` to do the work and open the PR.
+
 ## Local conda setup
 
 1. Make sure [Miniconda](https://www.anaconda.com/docs/getting-started/miniconda/install/overview) is installed

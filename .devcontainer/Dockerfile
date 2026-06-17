@@ -85,3 +85,58 @@ RUN cd /tmp/ui-deps \
     && npx playwright install chromium \
     && cd / \
     && rm -rf /tmp/ui-deps
+
+# ----------------------------------------------------------------------------
+# sprint-base: per-sprint WARM SEED on top of dev (orchestrator run mode).
+# Bakes a PINNED commit at a NON-workspace path (/opt/seed/driftID) plus warm
+# Flutter/HF caches, so a per-task container can cold-start fast. The seed is
+# never authoritative — the entrypoint always `git fetch && switch main &&
+# pull` on top at runtime. Rebuilt once per sprint. The clone token is a
+# BuildKit secret (never baked into a layer); no auth is stored in the image.
+#
+# Build with BuildKit + a token secret, e.g.:
+#   GH_TOKEN=$(gh auth token) DOCKER_BUILDKIT=1 docker build \
+#     --target sprint-base --build-arg SPRINT_REF=<commit-or-tag> \
+#     --secret id=gh_token,env=GH_TOKEN -t driftid-sprint:S### \
+#     -f .devcontainer/Dockerfile .
+# (or use ./orchestrate.sh build-sprint S### <ref>)
+# ----------------------------------------------------------------------------
+FROM dev AS sprint-base
+
+ARG SPRINT_REF=main
+ARG REPO_URL=https://github.com/k13nNg/driftID.git
+
+USER root
+# A vscode-owned mountpoint so a fresh per-task named volume inherits vscode
+# ownership (Docker seeds an empty named volume's perms from the image path).
+RUN mkdir -p /workspaces/driftID && chown -R vscode:vscode /workspaces
+COPY .devcontainer/orchestrator-entrypoint.sh /usr/local/bin/orchestrator-entrypoint.sh
+RUN chmod +x /usr/local/bin/orchestrator-entrypoint.sh
+
+USER vscode
+
+# Clone the pinned ref into the seed path using a build-time token secret. The
+# token is read only from the secret mount; the stored remote is rewritten to a
+# tokenless URL so nothing sensitive lands in an image layer. FULL clone (NOT
+# --depth 1) so the worker keeps history for switch/pull/diff.
+RUN --mount=type=secret,id=gh_token,uid=1000,mode=0400 \
+    set -eux; \
+    GH_TOKEN="$(cat /run/secrets/gh_token)"; \
+    git clone "https://x-access-token:${GH_TOKEN}@${REPO_URL#https://}" /opt/seed/driftID; \
+    cd /opt/seed/driftID; \
+    git checkout "${SPRINT_REF}"; \
+    git remote set-url origin "${REPO_URL}"; \
+    git config --global --add safe.directory /opt/seed/driftID
+
+# Warm Flutter deps + a release web build, and pre-download the timm/HF DINOv3
+# backbone into ~/.cache so the first build/inference in a worker is fast. A
+# failed pre-warm is non-fatal (it just falls back to a runtime download).
+RUN set -eux; \
+    cd /opt/seed/driftID/ui; \
+    flutter pub get; \
+    flutter build web --release; \
+    python -c "import timm; timm.create_model('vit_base_patch16_dinov3', pretrained=True, num_classes=0)" \
+      || echo "[sprint-base] WARN: backbone pre-warm failed; worker will download at runtime"
+
+ENV TASK_ID=""
+ENTRYPOINT ["/usr/local/bin/orchestrator-entrypoint.sh"]
