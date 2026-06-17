@@ -127,13 +127,17 @@ class _Thumbnail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor = isDark ? const Color(0xFF2A2831) : const Color(0xFFEDEDED);
+    final borderColor = isDark ? const Color(0xFF444050) : const Color(0xFFCCCCCC);
+
     return Container(
       width: _size,
       height: _size,
       decoration: BoxDecoration(
-        color: const Color(0xFFEDEDED),
+        color: backgroundColor,
         borderRadius: BorderRadius.circular(kDriftRadius),
-        border: Border.all(color: const Color(0xFFCCCCCC)),
+        border: Border.all(color: borderColor),
       ),
       clipBehavior: Clip.antiAlias,
       alignment: Alignment.center,
