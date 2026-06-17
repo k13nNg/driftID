@@ -45,7 +45,9 @@ Work is planned in `bookkeeping/task_management/`:
 - Some acceptance criteria are **Human:** (reviewer sign-off) — do not mark done without explicit approval.
 - When implementing work, follow the active task spec; update checkboxes only when criteria are actually met.
 
-**Active sprint:** [S001 — Setup Dependencies](bookkeeping/task_management/S001.md) — dev container deps (T000), FastAPI (T001), Flutter Web scaffold + Playwright smoke (T002), DriftID UI + demo recordings (T003).
+**Active sprint:** [S002 — Prediction history & navigation](bookkeeping/task_management/S002.md) — bottom tab nav (T005), local history store + auto-save (T006), browse history (T007), reopen result (T008), manage/clear (T009), history demo recording (T010).
+
+**Previous sprint:** [S001 — Setup Dependencies](bookkeeping/task_management/done/S001.md) (done) — dev container deps (T000), FastAPI (T001), Flutter Web scaffold + Playwright smoke (T002), DriftID UI + demo recordings (T003), UI cleanup (T004).
 
 ## Engineering guidelines
 
@@ -67,6 +69,8 @@ If the user’s request does not map to an existing task, say so and ask whether
 
 
 ## UI requirements
+
+**Scope:** "Simple and flat" is a **visual design** guideline only — it governs how the UI *looks* (styling, layout, chrome). It does **not** constrain code architecture, project/file structure, dependencies, or feature scope. Don't cite it to argue against extracting widgets, adding services/state management, splitting files, or building out functionality.
 
 - **Simple and flat** — minimal visual chrome; no gradients, glass effects, heavy shadows, or decorative animation
 - Prefer clean layout, solid colors, clear typography, and straightforward controls over polish-heavy or marketing-style design
