@@ -141,4 +141,12 @@ RUN set -eux; \
       || echo "[sprint-base] WARN: backbone pre-warm failed; worker will download at runtime"
 
 ENV TASK_ID=""
+# Land in the repo (on the per-task volume) by default — so `docker exec`, the
+# orchestrator's `attach`, and "Attach to Running Container" terminals open in
+# /workspaces/driftID rather than the home dir. The named volume mounts over
+# this path at runtime; the dir is pre-created vscode-owned above.
+WORKDIR /workspaces/driftID
+# Hint for the Dev Containers "Attach to Running Container" flow to open the repo
+# folder rather than the container home.
+LABEL devcontainer.metadata='[{"workspaceFolder":"/workspaces/driftID"}]'
 ENTRYPOINT ["/usr/local/bin/orchestrator-entrypoint.sh"]

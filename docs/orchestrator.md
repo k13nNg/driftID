@@ -50,8 +50,12 @@ Creates the `driftid-T012` volume + container, seeds the workspace, brings it up
 ### 5. Attach and do the work
 
 In Cursor/VS Code: **Cmd+Shift+P → Dev Containers: Attach to Running Container → `driftid-T012`**.
-Then run the [`implement-task`](../.cursor/skills/implement-task/SKILL.md) skill for the task — it
-branches, implements, tests, and opens the PR. (Repeat steps 4–5 for each task you want in flight.)
+
+The repo lives at **`/workspaces/driftID`** (on the per-task volume). The image sets that as its
+`WORKDIR`, so terminals open there; if the editor lands in the container home instead, use
+**File → Open Folder → `/workspaces/driftID`**. Then run the
+[`implement-task`](../.cursor/skills/implement-task/SKILL.md) skill for the task — it branches,
+implements, tests, and opens the PR. (Repeat steps 4–5 for each task you want in flight.)
 
 ### 6. Tear down (after the PR merges)
 
