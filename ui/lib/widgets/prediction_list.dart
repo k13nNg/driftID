@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../main.dart';
 import '../models/prediction.dart';
 
 /// Top-k results ordered by confidence (US-03). The first row is visually
@@ -25,7 +26,7 @@ class PredictionList extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _TopPrediction(prediction: top),
-          if (rest.isNotEmpty) const SizedBox(height: 12),
+          if (rest.isNotEmpty) const SizedBox(height: DriftSpacing.md),
           for (final p in rest) _PredictionRow(prediction: p),
         ],
       ),
@@ -43,10 +44,10 @@ class _TopPrediction extends StatelessWidget {
     final theme = Theme.of(context);
     return Container(
       key: const Key('top-prediction'),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(DriftSpacing.md),
       decoration: BoxDecoration(
-        color: theme.colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(8),
+        color: theme.colorScheme.tertiaryContainer,
+        borderRadius: BorderRadius.circular(kDriftRadius),
       ),
       child: Row(
         children: [
@@ -55,7 +56,7 @@ class _TopPrediction extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Best match', style: theme.textTheme.labelMedium),
-                const SizedBox(height: 4),
+                const SizedBox(height: DriftSpacing.xs),
                 Text(
                   prediction.title,
                   style: theme.textTheme.titleLarge?.copyWith(
@@ -88,7 +89,8 @@ class _PredictionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+      padding: const EdgeInsets.symmetric(
+          vertical: DriftSpacing.sm, horizontal: DriftSpacing.xs),
       child: Row(
         children: [
           Expanded(

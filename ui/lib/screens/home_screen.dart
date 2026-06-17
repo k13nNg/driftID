@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
+import '../main.dart';
 import '../models/prediction.dart';
 import '../services/api_client.dart';
 import '../widgets/image_preview.dart';
@@ -103,13 +104,13 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('DriftID'),
-        backgroundColor: theme.colorScheme.inversePrimary,
       ),
-      body: Center(
+      body: Align(
+        alignment: Alignment.topCenter,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 640),
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(DriftSpacing.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -117,9 +118,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   header: true,
                   child: Text(kAppTagline, style: theme.textTheme.titleMedium),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: DriftSpacing.lg),
                 ImagePreview(bytes: _bytes, url: _previewUrl),
-                const SizedBox(height: 16),
+                const SizedBox(height: DriftSpacing.md),
                 OutlinedButton.icon(
                   key: const Key('upload-button'),
                   onPressed: _loading ? null : _pickImage,
@@ -128,20 +129,20 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 if (_filename != null)
                   Padding(
-                    padding: const EdgeInsets.only(top: 8),
+                    padding: const EdgeInsets.only(top: DriftSpacing.sm),
                     child: Text('Selected: $_filename',
                         style: theme.textTheme.bodySmall),
                   ),
-                const SizedBox(height: 16),
-                Row(children: [
+                const SizedBox(height: DriftSpacing.md),
+                const Row(children: [
                   Expanded(child: Divider()),
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8),
+                    padding: EdgeInsets.symmetric(horizontal: DriftSpacing.sm),
                     child: Text('or'),
                   ),
                   Expanded(child: Divider()),
                 ]),
-                const SizedBox(height: 16),
+                const SizedBox(height: DriftSpacing.md),
                 TextField(
                   key: const Key('url-field'),
                   controller: _urlController,
@@ -150,7 +151,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Image URL',
                     hintText: 'https://example.com/car.jpg',
-                    border: OutlineInputBorder(),
                   ),
                   onChanged: (_) {
                     if (_bytes != null) {
@@ -162,21 +162,21 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                   onSubmitted: (_) => _identify(),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: DriftSpacing.lg),
                 FilledButton(
                   key: const Key('identify-button'),
                   onPressed: _loading ? null : _identify,
                   child: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12),
+                    padding: EdgeInsets.symmetric(vertical: DriftSpacing.md),
                     child: Text('Identify'),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: DriftSpacing.lg),
                 if (_loading)
                   const Center(
                     key: Key('loading-indicator'),
                     child: Padding(
-                      padding: EdgeInsets.all(16),
+                      padding: EdgeInsets.all(DriftSpacing.md),
                       child: CircularProgressIndicator(),
                     ),
                   ),
@@ -185,15 +185,15 @@ class _HomeScreenState extends State<HomeScreen> {
                     liveRegion: true,
                     child: Container(
                       key: const Key('error-message'),
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(DriftSpacing.md),
                       decoration: BoxDecoration(
                         color: theme.colorScheme.errorContainer,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(kDriftRadius),
                       ),
                       child: Row(children: [
                         Icon(Icons.error_outline,
                             color: theme.colorScheme.onErrorContainer),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: DriftSpacing.sm),
                         Expanded(
                           child: Text(
                             _error!,

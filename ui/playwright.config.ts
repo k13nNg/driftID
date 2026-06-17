@@ -4,8 +4,11 @@ export default defineConfig({
   testDir: './demos',
   use: {
     baseURL: 'http://localhost:8080',
-    viewport: { width: 1280, height: 720 },
-    video: { mode: 'on', size: { width: 1280, height: 720 } },
+    // iPhone 14 / 13 logical resolution: 390 × 844 — keeps the recorded demo
+    // phone-shaped. Dimensions are set directly (rather than spreading
+    // devices['iPhone 14']) to keep the existing Chromium + CanvasKit setup.
+    viewport: { width: 390, height: 844 },
+    video: { mode: 'on', size: { width: 390, height: 844 } },
     // Flutter Web's CanvasKit engine throws "Incorrect locale information
     // provided" under headless Chromium unless a locale is supplied.
     locale: 'en-US',
