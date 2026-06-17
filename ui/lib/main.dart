@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'app_shell.dart';
+import 'services/history_store.dart';
 
 void main() {
   runApp(const DriftIDApp());
@@ -33,8 +34,31 @@ class DriftSpacing {
 /// One corner radius shared across preview, predictions, and error containers.
 const double kDriftRadius = 12;
 
-class DriftIDApp extends StatelessWidget {
-  const DriftIDApp({super.key});
+class DriftIDApp extends StatefulWidget {
+  const DriftIDApp({super.key, this.historyStore});
+
+  /// Injectable for tests; defaults to a real [HistoryStore] in production.
+  final HistoryStore? historyStore;
+
+  @override
+  State<DriftIDApp> createState() => _DriftIDAppState();
+}
+
+class _DriftIDAppState extends State<DriftIDApp> {
+  late final HistoryStore _historyStore = widget.historyStore ?? HistoryStore();
+
+  @override
+  void initState() {
+    super.initState();
+    // Hydrate saved history from browser-local storage once on startup (US-08).
+    _historyStore.load();
+  }
+
+  @override
+  void dispose() {
+    if (widget.historyStore == null) _historyStore.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -103,7 +127,7 @@ class DriftIDApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const AppShell(),
+      home: AppShell(historyStore: _historyStore),
     );
   }
 }

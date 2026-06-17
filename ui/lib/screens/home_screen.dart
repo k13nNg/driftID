@@ -4,8 +4,11 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../main.dart';
+import '../models/history_entry.dart';
 import '../models/prediction.dart';
 import '../services/api_client.dart';
+import '../services/history_store.dart';
+import '../services/image_downscale.dart';
 import '../widgets/image_preview.dart';
 import '../widgets/prediction_list.dart';
 
@@ -14,9 +17,12 @@ const String kAppTagline =
     'Identify a car\'s make and model from a photo.';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, this.apiClient});
+  const HomeScreen({super.key, this.apiClient, this.historyStore});
 
   final ApiClient? apiClient;
+
+  /// When provided, each successful identification is auto-saved here (US-08).
+  final HistoryStore? historyStore;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -79,22 +85,60 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       final List<Prediction> results;
+      final HistorySource source;
       if (hasFile) {
+        source = HistorySource.upload;
         results = await _api.predictBytes(
           _bytes!,
           filename: _filename ?? 'upload.jpg',
         );
       } else {
+        source = HistorySource.url;
         results = await _api.predictUrl(url);
         setState(() => _previewUrl = url);
       }
       setState(() => _predictions = results);
+      // Auto-save the successful identification (US-08). Fire-and-forget: don't
+      // block the result view on persistence, and never surface storage errors.
+      if (results.isNotEmpty) {
+        _saveToHistory(source: source, url: url, results: results);
+      }
     } on ApiException catch (e) {
       setState(() => _error = e.message);
     } catch (_) {
       setState(() => _error = 'Something went wrong. Please try again.');
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  /// Persists a successful identification to history without blocking the result
+  /// view (US-08). Uploads are stored as a downscaled data URL; URL submissions
+  /// keep the original reference. Storage failures are swallowed so they never
+  /// look like inference errors.
+  Future<void> _saveToHistory({
+    required HistorySource source,
+    required String url,
+    required List<Prediction> results,
+  }) async {
+    final store = widget.historyStore;
+    if (store == null) return;
+    try {
+      final String imageRef;
+      if (source == HistorySource.upload) {
+        final bytes = _bytes;
+        if (bytes == null) return;
+        imageRef = await encodeImageAsDataUrl(bytes);
+      } else {
+        imageRef = url;
+      }
+      await store.add(HistoryEntry.now(
+        source: source,
+        imageRef: imageRef,
+        predictions: results,
+      ));
+    } catch (_) {
+      // Best-effort persistence — never surface storage errors to the user.
     }
   }
 
