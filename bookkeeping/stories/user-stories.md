@@ -16,6 +16,7 @@ Each story lives in its own `US-##-*.md` file. Sprints and tasks reference stori
 | [US-02 — Submit an image URL](US-02-submit-image-url.md) | Used-car shopper | S001 |
 | [US-03 — View top-k predictions with confidence](US-03-view-top-k-predictions.md) | Car enthusiast | S001 |
 | [US-04 — Run inference in real time](US-04-real-time-inference.md) | Car enthusiast | S001 |
+| [US-14 — See results in a dedicated view](US-14-dedicated-result-view.md) | Car enthusiast | S003 |
 
 ## Application experience
 
@@ -24,6 +25,8 @@ Each story lives in its own `US-##-*.md` file. Sprints and tasks reference stori
 | [US-05 — Understand the app at a glance](US-05-app-at-a-glance.md) | Used-car shopper | S001 |
 | [US-06 — Readable prediction labels](US-06-readable-prediction-labels.md) | Used-car shopper | S001 |
 | [US-07 — Navigate via a bottom tab bar](US-07-bottom-tab-navigation.md) | Car enthusiast | S002 |
+| [US-12 — Choose a color theme](US-12-choose-color-theme.md) | Car enthusiast | S003 |
+| [US-13 — A focused, uncluttered Search screen](US-13-focused-search-screen.md) | Used-car shopper | S003 |
 
 ## History & revisiting
 
