@@ -56,79 +56,17 @@ python src/test.py
 
 ## Orchestrator mode (parallel tasks)
 
-The same dev container image runs two ways:
-
-| Mode | How it's launched | Source | Use |
-|------|-------------------|--------|-----|
-| **Interactive** | _Reopen in Container_ (above) | host workspace **bind-mounted** at `/workspaces/driftID` | hands-on solo work |
-| **Orchestrator** | `./orchestrate.sh up <T###>` (host) | per-task **named volume**, no host mount | running several `T###` tasks in parallel |
-
-The image is layered so the expensive toolchain stays cached:
-
-```
-base  (conda env, Flutter SDK, Playwright, Chromium)   ← rebuild only on dep changes
- └─ dev  (+ gh CLI, warm npm/Playwright caches)         ← target used by the dev container
-     └─ sprint-base  (bakes a PINNED commit at /opt/seed/driftID + warm builds)  ← rebuilt per sprint
-```
-
-`base`/`dev` stay **code-free**; only `sprint-base` bakes a seed, and only as a warm
-start — a worker always `git fetch && switch main && pull` on top at runtime. Auth
-(`GH_TOKEN`) is injected at runtime, never baked into a layer.
-
-**Build the images** (run on the host):
+Besides the interactive dev container, the same image can run one isolated container **per `T###`
+task** so multiple agents code in parallel. The host-side driver is `orchestrate.sh`:
 
 ```bash
-./orchestrate.sh build-dev                       # base/dev toolchain image
-./orchestrate.sh build-sprint S002 <commit-sha>  # per-sprint warm seed, pinned to a commit
+./orchestrate.sh build-sprint S002 $(git rev-parse origin/main) --push   # per-sprint seed
+./orchestrate.sh up T012        # provision + warm-start a task container
+./orchestrate.sh down T012      # tear down after the PR merges
 ```
 
-`build-sprint` takes **two required args** — the sprint name and an explicit commit (or
-branch/tag) — so a seed is always pinned to a known commit, never an implicit `main`. To pin the
-current tip of main, resolve it yourself: `./orchestrate.sh build-sprint S002 $(git rev-parse origin/main)`.
-
-Both accept `--push` to publish to GHCR (`ghcr.io/<owner>/driftid-{dev,sprint}`).
-Override `REGISTRY` / `IMAGE_OWNER` / `REPO_URL` via env if needed.
-
-**Resetting / re-pinning a seed.** The ref is resolved to a concrete SHA and the image is tagged
-**twice**: a moving `:S###` (latest seed for that sprint) and an immutable `:S###-<sha>` snapshot.
-To refresh a seed, re-run `build-sprint S### <newcommit>` — because it pins to the resolved SHA,
-the clone + warm-build layers correctly bust and reseed. Old snapshots stay pinnable under their
-`:S###-<sha>` tag, so nothing is silently lost; pass `--no-cache` to force a full reclone. `up`
-always launches from the moving `:S###` tag.
-
-**Auth prerequisites:**
-
-- **Private clone** (both builds): `gh auth login` so `gh auth token` resolves a token with
-  `repo` scope (the orchestrator injects it as a BuildKit secret — it is *not* baked into the image).
-- **`--push` to GHCR**: log Docker into GHCR specifically — plain `docker login` only touches
-  Docker Hub. `IMAGE_OWNER` must be your **GitHub** account (not a Docker Hub handle), and the
-  token needs `write:packages`:
-
-  ```bash
-  gh auth login --hostname github.com --git-protocol https --scopes write:packages
-  gh auth token | docker login ghcr.io -u <your-github-username> --password-stdin
-  ```
-
-  New GHCR packages default to **private**; make them public or grant access in the package
-  settings if another account or CI needs to pull them.
-
-**Run a task container:**
-
-```bash
-./orchestrate.sh up T006        # start a container off driftid-sprint:S###
-./orchestrate.sh logs T006      # follow the warm-start (seed → fetch → build)
-./orchestrate.sh ls             # list task containers
-./orchestrate.sh attach T006    # open a shell (or use Attach to Running Container)
-./orchestrate.sh down T006      # stop+remove; guards unpushed/uncommitted work
-```
-
-Containers publish **no ports** — each is network-isolated, so in-container ports stay
-constant (`API_PORT=8000`, `WEB_PORT=8080`). Reach the app/API by attaching with
-**Dev Containers: Attach to Running Container**, which forwards the ports for you.
-
-Persistence is `git push`: the named volume is the safety net, and `down` refuses to
-destroy a volume with unpushed commits unless you pass `--force`. Once attached, run the
-`implement-task` skill for the `T###` to do the work and open the PR.
+See **[docs/orchestrator.md](docs/orchestrator.md)** for the full guide — image layering, auth
+setup, seed reset/snapshot tags, the per-task workflow, ports/persistence, CI, and troubleshooting.
 
 ## Local conda setup
 
