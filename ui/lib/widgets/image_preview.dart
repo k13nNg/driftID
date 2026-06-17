@@ -21,15 +21,19 @@ class ImagePreview extends StatelessWidget {
     final theme = Theme.of(context);
     final hasImage = bytes != null || (url != null && url!.isNotEmpty);
 
+    final isDark = theme.brightness == Brightness.dark;
+    final backgroundColor = isDark ? const Color(0xFF2A2831) : const Color(0xFFEDEDED);
+    final borderColor = isDark ? const Color(0xFF444050) : const Color(0xFFCCCCCC);
+
     return Container(
       key: const Key('image-preview'),
       height: 220,
       decoration: BoxDecoration(
         // Neutral grey preview surface (not the pastel blue tint) so uploaded
         // photos read true-to-colour.
-        color: const Color(0xFFEDEDED),
+        color: backgroundColor,
         borderRadius: BorderRadius.circular(kDriftRadius),
-        border: Border.all(color: const Color(0xFFCCCCCC)),
+        border: Border.all(color: borderColor),
       ),
       clipBehavior: Clip.antiAlias,
       alignment: Alignment.center,

@@ -4,17 +4,25 @@ import 'screens/history_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/settings_screen.dart';
 import 'services/history_store.dart';
+import 'services/settings_store.dart';
 
 /// App shell hosting the three top-level sections behind a persistent bottom
 /// [NavigationBar] (US-07). An [IndexedStack] keeps every tab's state alive, so
 /// switching sections never triggers a route push or full reload — the Search
 /// flow keeps its picked image / results when the user visits History and back.
 class AppShell extends StatefulWidget {
-  const AppShell({super.key, required this.historyStore});
+  const AppShell({
+    super.key,
+    required this.historyStore,
+    required this.settingsStore,
+  });
 
   /// Shared, app-lifetime store. Search appends to it (T006); History
   /// reads/mutates it (T007/T009).
   final HistoryStore historyStore;
+
+  /// Shared, app-lifetime settings store (T013).
+  final SettingsStore settingsStore;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -36,7 +44,7 @@ class _AppShellState extends State<AppShell> {
         children: [
           HomeScreen(historyStore: widget.historyStore),
           HistoryScreen(historyStore: widget.historyStore),
-          const SettingsScreen(),
+          SettingsScreen(settingsStore: widget.settingsStore),
         ],
       ),
       bottomNavigationBar: NavigationBar(
