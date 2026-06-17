@@ -85,6 +85,64 @@ void main() {
     expect(find.byKey(const Key('history-tile-a')), findsOneWidget);
   });
 
+  testWidgets('deleting a single entry removes its tile and persists (US-11)',
+      (tester) async {
+    final store = HistoryStore();
+    await store.load();
+    await store.add(entry(id: 'keep', at: DateTime(2026, 1, 1)));
+    await store.add(entry(id: 'drop', at: DateTime(2026, 6, 1)));
+    await pumpScreen(tester, store);
+
+    await tester.tap(find.byKey(const Key('delete-entry-drop')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('history-tile-drop')), findsNothing);
+    expect(find.byKey(const Key('history-tile-keep')), findsOneWidget);
+    expect(find.text('Removed from history'), findsOneWidget);
+    // Persisted immediately: a fresh store reloads only the kept entry.
+    final reloaded = HistoryStore();
+    await reloaded.load();
+    expect(reloaded.entries.map((e) => e.id), const ['keep']);
+  });
+
+  testWidgets('clear-all is hidden when history is empty (US-11)',
+      (tester) async {
+    final store = HistoryStore();
+    await store.load();
+    await pumpScreen(tester, store);
+
+    expect(find.byKey(const Key('clear-history')), findsNothing);
+  });
+
+  testWidgets('clear-all confirms, empties the store, and shows empty state '
+      '(US-11)', (tester) async {
+    final store = HistoryStore();
+    await store.load();
+    await store.add(entry(id: 'a', at: DateTime(2026, 6, 1)));
+    await store.add(entry(id: 'b', at: DateTime(2026, 6, 2)));
+    await pumpScreen(tester, store);
+
+    // Cancelling the confirmation leaves history intact.
+    await tester.tap(find.byKey(const Key('clear-history')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('history-list')), findsOneWidget);
+
+    // Confirming clears everything and falls back to the empty state.
+    await tester.tap(find.byKey(const Key('clear-history')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirm-clear')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('history-empty')), findsOneWidget);
+    expect(find.byKey(const Key('clear-history')), findsNothing);
+
+    final reloaded = HistoryStore();
+    await reloaded.load();
+    expect(reloaded.entries, isEmpty);
+  });
+
   group('formatRelativeTime', () {
     final now = DateTime(2026, 6, 16, 12, 0);
 

@@ -8,17 +8,27 @@ import '../models/history_entry.dart';
 
 /// One row in the history list (US-09): a small thumbnail, the top make/model
 /// (+ year range), its confidence, and a relative timestamp. The whole row is
-/// tappable so T008 can wire reopening; until then [onTap] is typically null.
+/// tappable to reopen the saved result (T008); a trailing delete control
+/// removes just this entry (T009, US-11).
 ///
 /// Reuses the existing [Prediction] formatting (US-06 carryover) and the shared
 /// palette/spacing tokens; stays flat (no gradients/shadows) per AGENTS.md.
 class HistoryTile extends StatelessWidget {
-  const HistoryTile({super.key, required this.entry, this.onTap});
+  const HistoryTile({
+    super.key,
+    required this.entry,
+    this.onTap,
+    this.onDelete,
+  });
 
   final HistoryEntry entry;
 
   /// Wired in T008 to open the saved result; rendered tappable regardless.
   final VoidCallback? onTap;
+
+  /// Wired in T009 to delete just this entry; the trailing delete control is
+  /// only rendered when provided.
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -85,6 +95,16 @@ class HistoryTile extends StatelessWidget {
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
+                ),
+              ],
+              if (onDelete != null) ...[
+                const SizedBox(width: DriftSpacing.xs),
+                IconButton(
+                  key: Key('delete-entry-${entry.id}'),
+                  onPressed: onDelete,
+                  icon: const Icon(Icons.delete_outline),
+                  tooltip: 'Delete',
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
               ],
             ],
