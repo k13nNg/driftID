@@ -1,4 +1,9 @@
-FROM mcr.microsoft.com/devcontainers/miniconda:1-3
+# ----------------------------------------------------------------------------
+# base: heavy, rarely-changing toolchain (system deps, node, flutter, conda env)
+# This stage is expensive to build but its layers stay cached as long as the
+# instructions below don't change. Don't add fast-moving tools here.
+# ----------------------------------------------------------------------------
+FROM mcr.microsoft.com/devcontainers/miniconda:1-3 AS base
 
 USER root
 
@@ -46,3 +51,24 @@ RUN flutter config --enable-web --no-analytics \
 
 RUN echo 'source /opt/conda/etc/profile.d/conda.sh' >> ~/.bashrc \
     && echo "conda activate gpu-env" >> ~/.bashrc
+
+# ----------------------------------------------------------------------------
+# dev: lightweight, fast-changing layer on top of the cached base.
+# Add CLI tools and small tweaks here — rebuilding this stage is cheap and
+# never invalidates the expensive base layers above.
+# ----------------------------------------------------------------------------
+FROM base AS dev
+
+USER root
+
+# GitHub CLI
+RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+      -o /usr/share/keyrings/githubcli-archive-keyring.gpg \
+    && chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+      > /etc/apt/sources.list.d/github-cli.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends gh \
+    && rm -rf /var/lib/apt/lists/*
+
+USER vscode
