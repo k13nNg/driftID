@@ -75,7 +75,7 @@ base  (conda env, Flutter SDK, Playwright, Chromium)   ← rebuild only on dep c
 start — a worker always `git fetch && switch main && pull` on top at runtime. Auth
 (`GH_TOKEN`) is injected at runtime, never baked into a layer.
 
-**Build the images** (host, needs a GitHub token for the private clone):
+**Build the images** (run on the host):
 
 ```bash
 ./orchestrate.sh build-dev                  # base/dev toolchain image
@@ -84,6 +84,22 @@ start — a worker always `git fetch && switch main && pull` on top at runtime. 
 
 Both accept `--push` to publish to GHCR (`ghcr.io/<owner>/driftid-{dev,sprint}`).
 Override `REGISTRY` / `IMAGE_OWNER` / `REPO_URL` via env if needed.
+
+**Auth prerequisites:**
+
+- **Private clone** (both builds): `gh auth login` so `gh auth token` resolves a token with
+  `repo` scope (the orchestrator injects it as a BuildKit secret — it is *not* baked into the image).
+- **`--push` to GHCR**: log Docker into GHCR specifically — plain `docker login` only touches
+  Docker Hub. `IMAGE_OWNER` must be your **GitHub** account (not a Docker Hub handle), and the
+  token needs `write:packages`:
+
+  ```bash
+  gh auth login --hostname github.com --git-protocol https --scopes write:packages
+  gh auth token | docker login ghcr.io -u <your-github-username> --password-stdin
+  ```
+
+  New GHCR packages default to **private**; make them public or grant access in the package
+  settings if another account or CI needs to pull them.
 
 **Run a task container:**
 
