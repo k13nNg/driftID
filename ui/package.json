@@ -1,0 +1,12 @@
+{
+  "name": "driftid_ui_demos",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Playwright demo recordings for the DriftID Flutter Web app",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0"
+  }
+}
