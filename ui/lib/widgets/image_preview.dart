@@ -2,6 +2,8 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
+import '../main.dart';
+
 /// Shows a preview of the image the user is about to identify — either picked
 /// bytes (upload) or a network image (URL). Falls back to a placeholder when
 /// nothing is selected (US-01).
@@ -23,9 +25,11 @@ class ImagePreview extends StatelessWidget {
       key: const Key('image-preview'),
       height: 220,
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: theme.colorScheme.outlineVariant),
+        // Neutral grey preview surface (not the pastel blue tint) so uploaded
+        // photos read true-to-colour.
+        color: const Color(0xFFEDEDED),
+        borderRadius: BorderRadius.circular(kDriftRadius),
+        border: Border.all(color: const Color(0xFFCCCCCC)),
       ),
       clipBehavior: Clip.antiAlias,
       alignment: Alignment.center,
