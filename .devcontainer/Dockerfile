@@ -72,3 +72,16 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
     && rm -rf /var/lib/apt/lists/*
 
 USER vscode
+
+# Pre-warm the npm cache and Playwright browser download for the ui/ test
+# tooling. The workspace is bind-mounted at runtime, so ui/node_modules is
+# recreated by postCreate's `npm ci`; but the npm cache (~/.npm) and the
+# Playwright browsers (~/.cache/ms-playwright) live outside the mount and
+# persist in the image, so those postCreate steps become fast/offline.
+# Only the lockfiles are copied, so this layer is cached until they change.
+COPY --chown=vscode:vscode ui/package.json ui/package-lock.json /tmp/ui-deps/
+RUN cd /tmp/ui-deps \
+    && npm ci \
+    && npx playwright install chromium \
+    && cd / \
+    && rm -rf /tmp/ui-deps
