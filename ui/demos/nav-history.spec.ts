@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
 
-// Stub navigation test (T005): tapping the History tab switches to the History
-// section. The placeholder content is asserted here; richer history behaviour
-// (list, reopen, clear) gets its own tests when T007–T009 land.
+// Navigation test: tapping the History tab switches to the History section.
+// With a fresh browser context (no saved history) the empty-state guidance
+// from T007 is shown; the populated list + reopen flow is recorded in T010.
 test('navigate to history tab', async ({ page }) => {
   await page.goto('/');
 
@@ -16,7 +16,7 @@ test('navigate to history tab', async ({ page }) => {
   await historyTab.waitFor({ timeout: 15_000 });
   await historyTab.click();
 
-  // Placeholder body for this task (populated in T007).
-  await expect(page.getByText('No history yet')).toBeVisible({ timeout: 15_000 });
+  // Empty-state guidance shown when there are no saved identifications (T007).
+  await expect(page.getByText('No identifications yet')).toBeVisible({ timeout: 15_000 });
   await page.waitForTimeout(1500);
 });

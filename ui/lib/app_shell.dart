@@ -35,7 +35,7 @@ class _AppShellState extends State<AppShell> {
         index: _index,
         children: [
           HomeScreen(historyStore: widget.historyStore),
-          const HistoryScreen(),
+          HistoryScreen(historyStore: widget.historyStore),
           const SettingsScreen(),
         ],
       ),
