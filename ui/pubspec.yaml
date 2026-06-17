@@ -41,9 +41,20 @@ dependencies:
   # Cross-platform (incl. web) file picking for image uploads.
   file_picker: ^8.1.4
 
+  # Local, browser-backed key/value store for prediction history (T006). On web
+  # this is backed by localStorage — local-only, no server (US-08).
+  shared_preferences: ^2.3.2
+
+  # Browser APIs (canvas/image) used to downscale uploaded images before
+  # persisting them as data URLs (T006). Web-only, via conditional import.
+  web: ^1.1.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
+
+  # Used in tests to install an in-memory SharedPreferencesAsync backend.
+  shared_preferences_platform_interface: ^2.4.0
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
