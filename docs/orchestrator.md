@@ -4,16 +4,63 @@ Run several `T###` tasks in parallel, each in its own isolated container, all sh
 prebuilt toolchain image. The host-side driver is [`orchestrate.sh`](../orchestrate.sh); the
 image is defined in [`.devcontainer/Dockerfile`](../.devcontainer/Dockerfile).
 
-> TL;DR
-> ```bash
-> # one-time / per-sprint
-> ./orchestrate.sh build-dev --push
-> ./orchestrate.sh build-sprint S002 $(git rev-parse origin/main) --push
-> # per task
-> ./orchestrate.sh up T012        # provision + warm-start a container
-> #   → attach in Cursor, run the implement-task skill
-> ./orchestrate.sh down T012      # tear down after the PR merges
-> ```
+## Quick start
+
+Run everything **on the host** (Docker Desktop), from the repo root. See
+[Prerequisites](#prerequisites) for the one-time auth setup.
+
+### 1. Authenticate (one time)
+
+```bash
+gh auth login --hostname github.com --git-protocol https --scopes write:packages
+gh auth token | docker login ghcr.io -u <your-github-username> --password-stdin
+```
+
+Logs `gh` in (so the build can clone the private repo) and logs Docker into **GHCR** (so you can
+push/pull images). Skip the second line if you don't intend to push images to the registry.
+
+### 2. Build the toolchain image (rarely)
+
+```bash
+./orchestrate.sh build-dev --push
+```
+
+Builds the `dev` image (conda env, Flutter SDK, Playwright, `gh`). You only repeat this when a
+toolchain dep file changes — otherwise the layers stay cached. Drop `--push` to keep it local.
+
+### 3. Build the sprint seed (once per sprint)
+
+```bash
+./orchestrate.sh build-sprint S002 $(git rev-parse origin/main) --push
+```
+
+Bakes a warm seed (a clone of the given commit + a prebuilt Flutter web bundle + the DINOv3
+backbone) so task containers start fast. The commit is **required** — here we pin the current tip
+of `main`. Re-run with a new commit to refresh the seed.
+
+### 4. Start a task container
+
+```bash
+./orchestrate.sh up T012
+```
+
+Creates the `driftid-T012` volume + container, seeds the workspace, brings it up to date with
+`main`, runs `flutter pub get`, and parks ready. Watch it warm up with `./orchestrate.sh logs T012`.
+
+### 5. Attach and do the work
+
+In Cursor/VS Code: **Cmd+Shift+P → Dev Containers: Attach to Running Container → `driftid-T012`**.
+Then run the [`implement-task`](../.cursor/skills/implement-task/SKILL.md) skill for the task — it
+branches, implements, tests, and opens the PR. (Repeat steps 4–5 for each task you want in flight.)
+
+### 6. Tear down (after the PR merges)
+
+```bash
+./orchestrate.sh down T012
+```
+
+Removes the container and its volume. It refuses if there are uncommitted or unpushed changes
+unless you pass `--force`.
 
 ## Two run modes of one image
 
