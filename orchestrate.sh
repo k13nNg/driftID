@@ -16,7 +16,11 @@
 #   ./orchestrate.sh attach <T###>           open a shell (and print attach hint)
 #   ./orchestrate.sh logs  <T###>            follow warm-start logs
 #   ./orchestrate.sh build-dev    [--push]   build (item 1) the dev image
-#   ./orchestrate.sh build-sprint <S###> [ref] [--push]   build the sprint seed
+#   ./orchestrate.sh build-sprint <S###> <commit-sha> [--push] [--no-cache]   build the sprint seed
+#       BOTH the sprint name and the commit/ref are required (no default). The ref
+#       is resolved to a SHA and the image is tagged BOTH :S### (moving) and
+#       :S###-<sha> (immutable snapshot). Re-run to reset a seed; --no-cache forces
+#       a full reclone+rebuild.
 #
 # Config (env overrides; defaults shown):
 #   REGISTRY=ghcr.io  IMAGE_OWNER=raywang999  SPRINT=S002
@@ -156,33 +160,70 @@ cmd_build_dev() {
   fi
 }
 
+# Resolve a ref (branch/tag/sha; default 'main' = latest) to a concrete commit
+# SHA. Pinning the build to a SHA is what makes a re-seed actually take effect:
+# a moving ref like 'main' has a stable cache key, so Docker would reuse the
+# stale cached seed even after main advances. A hex ref is used verbatim.
+resolve_sha() {
+  local ref="$1" sha=""
+  if [[ "$ref" =~ ^[0-9a-fA-F]{7,40}$ ]]; then echo "$ref"; return 0; fi
+  git -C "$CONTEXT" fetch --quiet --tags origin 2>/dev/null || true
+  sha="$(git -C "$CONTEXT" rev-parse --verify --quiet "origin/$ref^{commit}" 2>/dev/null \
+       || git -C "$CONTEXT" rev-parse --verify --quiet "$ref^{commit}" 2>/dev/null || true)"
+  if [ -z "$sha" ] && [ -n "${GH_TOKEN:-}" ]; then
+    # fallback: ask the remote directly (covers refs not in the local clone)
+    sha="$(git ls-remote "https://x-access-token:${GH_TOKEN}@${REPO_URL#https://}" "$ref" 2>/dev/null | awk 'NR==1{print $1}')"
+  fi
+  [ -n "$sha" ] || die "could not resolve ref '$ref' on $REPO_URL"
+  echo "$sha"
+}
+
 cmd_build_sprint() {
   need docker; need git
-  local sprint="${1:-}"; [ -n "$sprint" ] || die "usage: build-sprint <S###> [ref] [--push]"
-  shift
-  local ref="main" push=0
+  local sprint="${1:-}" ref="${2:-}"
+  [ -n "$sprint" ] || die "usage: build-sprint <S###> <commit-sha> [--push] [--no-cache]"
+  # Both args are required and explicit — no default ref. The 2nd arg must be a
+  # commit/ref, not a flag, so a forgotten SHA fails loudly instead of silently
+  # baking some implicit 'main'.
+  case "$ref" in
+    ""|--*) die "build-sprint requires an explicit <commit-sha> (or branch/tag) as the 2nd arg" ;;
+  esac
+  shift 2
+  local push=0 nocache=""
   for a in "$@"; do
     case "$a" in
       --push) push=1 ;;
-      *) ref="$a" ;;
+      --no-cache) nocache="--no-cache" ;;
+      *) die "unexpected argument '$a' (usage: build-sprint <S###> <commit-sha> [--push] [--no-cache])" ;;
     esac
   done
   GH_TOKEN="$(resolve_token)"; export GH_TOKEN
-  local local_tag="driftid-sprint:$sprint"
-  local reg="$REGISTRY/$IMAGE_OWNER/driftid-sprint:$sprint"
-  DOCKER_BUILDKIT=1 docker build \
+
+  local sha short
+  sha="$(resolve_sha "$ref")"; short="${sha:0:12}"
+
+  # Moving tag (latest seed for the sprint) + immutable snapshot tag. Rebuilding
+  # the sprint moves :S### to the new seed but leaves any :S###-<sha> snapshots
+  # intact, so an old seed is never silently lost.
+  local sprint_tag="driftid-sprint:$sprint"
+  local pin_tag="driftid-sprint:${sprint}-${short}"
+  local reg="$REGISTRY/$IMAGE_OWNER"
+
+  DOCKER_BUILDKIT=1 docker build $nocache \
     --target sprint-base \
-    --build-arg SPRINT_REF="$ref" \
+    --build-arg SPRINT_REF="$sha" \
     --build-arg REPO_URL="$REPO_URL" \
     --secret id=gh_token,env=GH_TOKEN \
-    -t "$local_tag" \
+    -t "$sprint_tag" \
+    -t "$pin_tag" \
     -f "$DOCKERFILE" "$CONTEXT"
-  docker tag "$local_tag" "$reg"
-  echo "built $local_tag (ref=$ref) -> $reg"
+  docker tag "$sprint_tag" "$reg/$sprint_tag"
+  docker tag "$pin_tag" "$reg/$pin_tag"
+  echo "built $sprint_tag + $pin_tag  (ref=$ref @ $short)"
   if [ "$push" -eq 1 ]; then
-    docker push "$reg"
+    docker push "$reg/$sprint_tag" && docker push "$reg/$pin_tag"
   else
-    echo "push with: docker push $reg"
+    echo "push with: docker push $reg/$sprint_tag && docker push $reg/$pin_tag"
   fi
 }
 

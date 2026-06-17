@@ -78,12 +78,23 @@ start — a worker always `git fetch && switch main && pull` on top at runtime. 
 **Build the images** (run on the host):
 
 ```bash
-./orchestrate.sh build-dev                  # base/dev toolchain image
-./orchestrate.sh build-sprint S002 <ref>    # per-sprint warm seed (ref = pinned commit/tag)
+./orchestrate.sh build-dev                       # base/dev toolchain image
+./orchestrate.sh build-sprint S002 <commit-sha>  # per-sprint warm seed, pinned to a commit
 ```
+
+`build-sprint` takes **two required args** — the sprint name and an explicit commit (or
+branch/tag) — so a seed is always pinned to a known commit, never an implicit `main`. To pin the
+current tip of main, resolve it yourself: `./orchestrate.sh build-sprint S002 $(git rev-parse origin/main)`.
 
 Both accept `--push` to publish to GHCR (`ghcr.io/<owner>/driftid-{dev,sprint}`).
 Override `REGISTRY` / `IMAGE_OWNER` / `REPO_URL` via env if needed.
+
+**Resetting / re-pinning a seed.** The ref is resolved to a concrete SHA and the image is tagged
+**twice**: a moving `:S###` (latest seed for that sprint) and an immutable `:S###-<sha>` snapshot.
+To refresh a seed, re-run `build-sprint S### <newcommit>` — because it pins to the resolved SHA,
+the clone + warm-build layers correctly bust and reseed. Old snapshots stay pinnable under their
+`:S###-<sha>` tag, so nothing is silently lost; pass `--no-cache` to force a full reclone. `up`
+always launches from the moving `:S###` tag.
 
 **Auth prerequisites:**
 
