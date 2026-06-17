@@ -54,6 +54,20 @@ Example inference:
 python src/test.py
 ```
 
+## Orchestrator mode (parallel tasks)
+
+Besides the interactive dev container, the same image can run one isolated container **per `T###`
+task** so multiple agents code in parallel. The host-side driver is `orchestrate.sh`:
+
+```bash
+./orchestrate.sh build-sprint S002 $(git rev-parse origin/main) --push   # per-sprint seed
+./orchestrate.sh up T012        # provision + warm-start a task container
+./orchestrate.sh down T012      # tear down after the PR merges
+```
+
+See **[docs/orchestrator.md](docs/orchestrator.md)** for the full guide — image layering, auth
+setup, seed reset/snapshot tags, the per-task workflow, ports/persistence, CI, and troubleshooting.
+
 ## Local conda setup
 
 1. Make sure [Miniconda](https://www.anaconda.com/docs/getting-started/miniconda/install/overview) is installed

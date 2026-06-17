@@ -1,0 +1,96 @@
+name: Build orchestrator images
+
+# Keeps the orchestrator images fresh (plan.md item 3):
+#   * dev image    — rebuilt+pushed when toolchain dep files change on main
+#   * sprint image — built+pushed on demand at sprint close (workflow_dispatch)
+# Images go to GHCR under the repo owner. GITHUB_TOKEN both authenticates the
+# registry and clones the (private) repo as the sprint-base build secret.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .devcontainer/Dockerfile
+      - .devcontainer/environment.yml
+      - ui/package.json
+      - ui/package-lock.json
+  workflow_dispatch:
+    inputs:
+      sprint:
+        description: Sprint id for the seed image tag (e.g. S002)
+        required: true
+        type: string
+      ref:
+        description: Pinned end-of-sprint commit/tag to bake as the seed
+        required: true
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  dev-image:
+    # Only the dep-change push path needs the dev image; dispatch handles sprint only.
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Lowercase owner
+        id: owner
+        run: echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+      - name: Build + push dev image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: .devcontainer/Dockerfile
+          target: dev
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ steps.owner.outputs.owner }}/driftid-dev:latest
+            ${{ env.REGISTRY }}/${{ steps.owner.outputs.owner }}/driftid-dev:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  sprint-image:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Lowercase owner
+        id: owner
+        run: echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+      - name: Build + push sprint seed image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: .devcontainer/Dockerfile
+          target: sprint-base
+          push: true
+          build-args: |
+            SPRINT_REF=${{ inputs.ref }}
+            REPO_URL=https://github.com/${{ github.repository }}.git
+          secrets: |
+            gh_token=${{ secrets.GITHUB_TOKEN }}
+          tags: ${{ env.REGISTRY }}/${{ steps.owner.outputs.owner }}/driftid-sprint:${{ inputs.sprint }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
