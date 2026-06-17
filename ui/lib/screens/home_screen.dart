@@ -9,8 +9,7 @@ import '../models/prediction.dart';
 import '../services/api_client.dart';
 import '../services/history_store.dart';
 import '../services/image_downscale.dart';
-import '../widgets/image_preview.dart';
-import '../widgets/prediction_list.dart';
+import '../widgets/result_view.dart';
 
 /// One-line summary of what the app does (US-05). Mirrors the README intent.
 const String kAppTagline =
@@ -163,7 +162,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Text(kAppTagline, style: theme.textTheme.titleMedium),
                 ),
                 const SizedBox(height: DriftSpacing.lg),
-                ImagePreview(bytes: _bytes, url: _previewUrl),
+                ResultView(
+                  bytes: _bytes,
+                  url: _previewUrl,
+                  predictions: _predictions,
+                ),
                 const SizedBox(height: DriftSpacing.md),
                 OutlinedButton.icon(
                   key: const Key('upload-button'),
@@ -248,8 +251,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       ]),
                     ),
                   ),
-                if (_predictions.isNotEmpty)
-                  PredictionList(predictions: _predictions),
               ],
             ),
           ),

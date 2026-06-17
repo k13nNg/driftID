@@ -4,6 +4,7 @@ import '../main.dart';
 import '../services/history_store.dart';
 import '../widgets/history_empty.dart';
 import '../widgets/history_tile.dart';
+import 'history_detail_screen.dart';
 
 /// History tab (US-09): a scannable, most-recent-first list of saved
 /// identifications, or a guidance empty state when there are none. Rebuilds
@@ -39,8 +40,16 @@ class HistoryScreen extends StatelessWidget {
                 itemCount: entries.length,
                 separatorBuilder: (context, index) => const Divider(height: 1),
                 itemBuilder: (context, index) {
-                  // Tapping a tile to reopen the full result is wired in T008.
-                  return HistoryTile(entry: entries[index]);
+                  final entry = entries[index];
+                  // Reopen the full saved result with no API call (T008, US-10).
+                  return HistoryTile(
+                    entry: entry,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => HistoryDetailScreen(entry: entry),
+                      ),
+                    ),
+                  );
                 },
               ),
             ),
