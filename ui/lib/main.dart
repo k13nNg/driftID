@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'screens/home_screen.dart';
+import 'app_shell.dart';
 
 void main() {
   runApp(const DriftIDApp());
@@ -103,7 +103,7 @@ class DriftIDApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const HomeScreen(),
+      home: const AppShell(),
     );
   }
 }
