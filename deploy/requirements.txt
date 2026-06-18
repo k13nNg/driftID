@@ -1,0 +1,23 @@
+# Runtime (inference-only) dependencies for the single-container Hugging Face
+# Space. This is intentionally a SUBSET of the conda env.yml used for dev/training
+# — the serving path never touches faiss / scikit-learn / scipy.
+#
+# CPU-only PyTorch: the +cpu local wheels live only on the PyTorch CPU index, so
+# pinning them guarantees we never pull the large CUDA build on the free tier.
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+torch==2.2.2+cpu
+torchvision==0.17.2+cpu
+
+timm==1.0.27
+
+# torch 2.2.2 is built against NumPy 1.x; NumPy 2 triggers "_ARRAY_API not found"
+# and can crash numpy-backed ops at inference. Pin below 2 to match.
+numpy<2
+
+fastapi
+uvicorn[standard]
+python-multipart
+pillow
+requests
+pydantic

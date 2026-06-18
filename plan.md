@@ -75,50 +75,59 @@ stage 2  runtime         (python:3.10-slim)
 
 ## Action items
 
-### 1. Serve the Flutter bundle from FastAPI
-- [ ] Add static serving to the FastAPI app so the built web bundle is served at `/` with a SPA
-      fallback to `index.html`, **without shadowing** `/health`, `/predict`, `/predict-url`.
-      - Mount a catch-all `StaticFiles(directory=WEB_DIR, html=True)` **after** the API routes, or add
-        an explicit fallback route; resolve `WEB_DIR` from an env var (default `/app/web`) so local dev
-        still works.
-      - Make it a **no-op when the bundle is absent** (local API-only runs shouldn't crash).
-- [ ] Keep `host=0.0.0.0`; allow the port to come from `PORT`/`API_PORT` (default 7860 in the image).
+### 1. Serve the Flutter bundle from FastAPI — DONE
+- [x] `src/api/server.py` mounts `StaticFiles(WEB_DIR, html=True)` at `/` **after** the API routes, so
+      `/health`, `/predict`, `/predict-url` still win and `/` serves the Flutter `index.html`.
+- [x] `WEB_DIR` comes from env (default `ROOT/ui/build/web`); the mount is a **no-op when absent**, so
+      local API-only runs are unaffected.
 
-### 2. Runtime dependency manifest
-- [ ] Add `deploy/requirements.txt` (or repo-root) pinning the inference subset:
-      `torch` (CPU wheel), `timm==1.0.27`, `fastapi`, `uvicorn[standard]`, `python-multipart`,
-      `pillow`, `requests`, `pydantic`.
+### 2. Runtime dependency manifest — DONE
+- [x] `deploy/requirements.txt`: CPU `torch`/`torchvision` (`+cpu` from the PyTorch CPU index),
+      `timm==1.0.27`, `fastapi`, `uvicorn[standard]`, `python-multipart`, `pillow`, `requests`,
+      `pydantic`. Deliberately excludes faiss/sklearn/scipy (training-only).
 
-### 3. Single multi-stage Dockerfile (repo root `Dockerfile`)
-- [ ] **Stage 1 (flutter-build)**: from a Flutter stable image; `COPY ui/`; `flutter pub get`;
+### 3. Single multi-stage Dockerfile (repo root `Dockerfile`) — DONE
+- [x] **Stage 1 (flutter-build)**: `ghcr.io/cirruslabs/flutter:stable`; `flutter pub get` →
       `flutter build web --release --dart-define=API_BASE_URL=`.
-- [ ] **Stage 2 (runtime)**: from `python:3.10-slim`; install requirements; `COPY src/ data/artifacts/`;
-      `COPY --from=flutter-build` the web bundle to `/app/web`; set `PYTHONPATH=/app`.
-- [ ] Create a non-root user (HF runs as UID 1000); set `HF_HOME`/caches to a writable, owned dir.
-- [ ] Pre-warm: `python -c "import timm; timm.create_model('vit_base_patch16_dinov3', pretrained=True, num_classes=0)"`
-      (non-fatal if it fails → falls back to runtime download).
-- [ ] `EXPOSE 7860`; `CMD ["uvicorn", "src.api.server:app", "--host", "0.0.0.0", "--port", "7860"]`.
+- [x] **Stage 2 (runtime)**: `python:3.10-slim` + `libgomp1`; non-root `user` (UID 1000); pip install
+      requirements; `COPY src/ data/artifacts/` + the web bundle to `$HOME/app/web`; `PYTHONPATH=$HOME/app`.
+- [x] `HF_HOME` set to a writable owned dir; backbone pre-warm baked (non-fatal on failure).
+- [x] `EXPOSE 7860`; `CMD uvicorn src.api.server:app --host 0.0.0.0 --port 7860`.
 
-### 4. HF Space metadata
-- [ ] Add the HF front-matter block to a README the Space reads (title, emoji, `colorFrom/To`,
-      `sdk: docker`, `app_port: 7860`, `pinned: false`). Decide whether to reuse the repo `README.md`
-      or ship a Space-specific one.
+### 4. HF Space metadata — DONE
+- [x] YAML front-matter added to repo-root `README.md` (`sdk: docker`, `app_port: 7860`, title/emoji/
+      colors). Reused the existing README (HF shows it as the Space card).
 
-### 5. Build-context hygiene
-- [ ] Extend `.dockerignore` so the Space build context excludes `bookkeeping/`, `data/json/`,
-      `data/train/`, `data/test/`, `ui/test-results/`, `ui/node_modules/`, demos, etc. — but **keep**
-      `data/artifacts/`, `src/`, `ui/` source. (Shared with the devcontainer build — verify it doesn't
-      break that.)
+### 5. Build-context hygiene — DONE
+- [x] `.dockerignore` excludes `bookkeeping/`, `docs/`, `data/json|train|test`, `features`,
+      `ui/build|node_modules|test-results|...`, demos — keeps `data/artifacts/`, `src/`, `ui/` source.
 
-### 6. Local verification before pushing
-- [ ] `docker build -t driftid-hf .` then `docker run -p 7860:7860 driftid-hf`; open
-      `http://localhost:7860`, confirm UI loads, `/health` is ok, and a `/predict` upload + a
-      `/predict-url` both return predictions.
+### 6. Deploy tooling — DONE
+- [x] `deploy/push-to-hf.sh` syncs only the deployment files into a clean mirror of the Space repo
+      (`./.hf-space`, git-ignored) and pushes — avoids HF's >10 MB/LFS limits and this repo's large
+      training tensors. (See **Deploy** below.)
 
-### 7. Deploy to the Space
-- [ ] Create the Space (Docker SDK) on HF.
-- [ ] Add the Space as a git remote and push (or use `huggingface_hub` upload). Watch the build logs;
-      confirm the running Space serves UI + predictions.
+### 7. Local verification before pushing — DONE
+- [x] Built `--platform linux/amd64` (matches HF) and ran on `:7860`: `/health` ok, `/` serves the
+      Flutter UI, `flutter_bootstrap.js` returns 200, and `POST /predict` on the sample image returns
+      predictions (audi_a7, 0.99). Fixes found en route: torch `+cpu` pin (2.2.2+cpu for amd64),
+      Flutter `:stable` + pubspec SDK lower bound `^3.12.0`, and `numpy<2` (torch 2.2.2 vs NumPy 2).
+
+### 8. Deploy to the Space — TODO (user action)
+- [ ] Run `deploy/push-to-hf.sh <space-git-url>`; authenticate with HF username + WRITE token.
+- [ ] Watch the Space **Logs** tab for the build; confirm it serves UI + predictions.
+
+## Deploy (Option B — plain git push, via the mirror script)
+
+```bash
+# from the repo root, with your Space already created (Docker SDK):
+deploy/push-to-hf.sh https://huggingface.co/spaces/<user>/driftid
+# git prompts: Username = <HF username>, Password = a HF WRITE token
+```
+
+The script clones the Space to `./.hf-space` (reused on later runs), copies in `Dockerfile`,
+`README.md`, `.dockerignore`, `deploy/requirements.txt`, `src/`, `data/artifacts/`, and the `ui/`
+source (no build outputs), then commits and pushes to `main`. HF rebuilds the image on each push.
 
 ## Risks / open questions
 

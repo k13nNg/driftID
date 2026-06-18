@@ -11,3 +11,6 @@ __pycache__/
 *.pyo
 *.pyd
 train_index
+
+# Hugging Face Space deploy mirror (deploy/push-to-hf.sh)
+/.hf-space

@@ -1,3 +1,17 @@
+---
+title: DriftID
+emoji: 🚗
+colorFrom: purple
+colorTo: pink
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
+<!-- The YAML block above is the Hugging Face Space config (Docker SDK) and MUST
+     be the first thing in this file. `app_port` must match the port uvicorn binds
+     in the Dockerfile. GitHub renders it as a small metadata table; HF consumes it. -->
+
 # 🚗 DriftID
 
 # 🚀 Overview
