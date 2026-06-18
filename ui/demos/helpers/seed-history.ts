@@ -1,4 +1,8 @@
 import type { Page } from '@playwright/test';
+import { SAMPLE_CAR_DATA_URL, SAMPLE_CAR_DATA_URL_ALT } from '../fixtures/seed-cars';
+
+// Re-exported so specs can pull the seed images and helpers from one place.
+export { SAMPLE_CAR_DATA_URL, SAMPLE_CAR_DATA_URL_ALT };
 
 // Pre-seed browser-local history for the T011 specs so the History flows
 // (browse / reopen / delete / clear) run from a populated user state without
@@ -37,12 +41,17 @@ export type SeedEntry = {
   predictions: SeedPrediction[];
 };
 
-/** A 1×1 transparent PNG as a `data:` URL — exercises the upload/data-URL branch. */
-export const TINY_PNG_DATA_URL =
-  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+/**
+ * Default offline-safe car image for seeded entries (T020). Both the
+ * `source: 'url'` branch (rendered via `Image.network`) and the
+ * `source: 'upload'` branch (decoded to bytes via `Image.memory`) resolve a
+ * `data:` URL without touching the network, so every seeded thumbnail/result
+ * paints a real car instead of the old blank placeholders.
+ */
+export const SEED_CAR_IMAGE = SAMPLE_CAR_DATA_URL;
 
-/** A remote image reference for `source: 'url'` fixtures (need not resolve). */
-export const REMOTE_IMAGE_REF = 'https://example.com/car.jpg';
+/** A second car image (mirror) so a seeded list isn't all identical thumbnails. */
+export const SEED_CAR_IMAGE_ALT = SAMPLE_CAR_DATA_URL_ALT;
 
 /**
  * Inject `entries` into localStorage in the real shared_preferences format so

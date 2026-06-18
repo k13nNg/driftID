@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { REMOTE_IMAGE_REF, seedHistory, type SeedEntry } from './helpers/seed-history';
+import { SEED_CAR_IMAGE, seedHistory, type SeedEntry } from './helpers/seed-history';
 
 // US-10/US-14: reopening a saved identification publishes it into the dedicated
 // Result tab, marked "saved" — reconstructed entirely from storage, with NO
@@ -10,7 +10,7 @@ const entry: SeedEntry = {
   id: 'seed-reopen',
   agoMs: 0,
   source: 'url',
-  imageRef: REMOTE_IMAGE_REF,
+  imageRef: SEED_CAR_IMAGE,
   predictions: [
     { class: 'audi_a7-gen_2010_2014', confidence: 0.91 },
     { class: 'audi_a6-gen_2011_2015', confidence: 0.06 },
@@ -52,6 +52,11 @@ test('reopen a saved result without inference', async ({ page }) => {
   await expect(page.getByText(/Audi A7/)).toBeVisible();
   await expect(page.getByText(/Audi A6/)).toBeVisible(); // a lower-ranked row
   await expect(page.getByText('91.0%')).toBeVisible();
+
+  // The saved image actually paints in the Result preview (T020): a real car
+  // data URL loads, so the shared preview shows the photo rather than the
+  // "Preview unavailable" placeholder the old never-resolving ref produced.
+  await expect(page.getByText('Preview unavailable')).toBeHidden();
 
   await page.waitForTimeout(1500); // let any (forbidden) request fire before asserting
 
