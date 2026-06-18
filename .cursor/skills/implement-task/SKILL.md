@@ -55,23 +55,31 @@ git switch -c <owner>/T<id>
 ### 4. Run the task's verification commands
 
 Run the exact commands from the task's **Run** section (and any sprint
-regression it names). For UI tasks that is typically:
+regression it names). For UI tasks that is the two-phase model from `AGENTS.md`:
 
 ```bash
-cd ui && flutter analyze && flutter test
-SLOWMO=0 npx playwright test   # existing + new demos must pass
+cd ui
+flutter analyze && flutter test
+npx playwright test --project=check    # headless gate: functional E2E must pass
+npx playwright test --project=record   # smaller curated subset, with video
 ```
 
 Fix failures and `flutter analyze` / linter warnings before moving on. Use the
 `ReadLints` tool on files you edited.
 
-**Always run the relevant Playwright demo(s), not just unit tests** — the WebM
-recording is the user-facing proof of what changed. After the run, surface the
-artifact so the user can see it:
+**The `check` project is the gate; the `record` project produces the PR proof.**
+Only `ui/demos/record-*.spec.ts` record video — if the task adds a *new* flow worth
+showing, add a `record-*.spec.ts`; otherwise re-record the existing relevant clip.
 
-- Find the recording(s): `ls ui/test-results/**/video.webm`.
-- Embed it (or a screenshot) in your summary with `![demo](<absolute-path>)` so it renders inline in chat.
-- If the task adds a *new* flow (e.g. the task names a new demo spec), record that clip; otherwise run the existing demo(s) the task lists as regression.
+After the record run, **publish the clips and surface them**:
+
+```bash
+./scripts/upload-demos.sh   # from ui/ — transcodes to mp4, uploads to a
+                            # demos-T### prerelease, prints a markdown URL block
+```
+
+- Keep the printed `### Demo recordings` block — it goes verbatim into the PR body (step 7).
+- Also embed a local recording (or a screenshot) in your chat summary with `![demo](<absolute-path>)` so it renders inline (find them: `ls ui/test-results/**/video.webm`).
 
 **Flutter gotcha:** `IndexedStack` builds every tab, so placeholder/section text
 in an off-screen tab still lives in the widget tree — avoid strings that collide
@@ -130,10 +138,15 @@ gh pr create --title "T<id> — <task title>" --body "$(cat <<'EOF'
 - [ ] **Human:** <reviewer sign-off still needed>
 
 ## Test plan
-- <commands run, e.g. flutter analyze, npx playwright test>
+- <commands run, e.g. flutter analyze, flutter test, playwright --project=check>
+
+### Demo recordings
+- [<flow>](<release-asset URL from ./scripts/upload-demos.sh>)
 EOF
 )"
 ```
+
+Paste the `### Demo recordings` block exactly as `upload-demos.sh` printed it.
 
 Return the PR URL. Do **not** merge, force-push, or commit unrelated changes.
 

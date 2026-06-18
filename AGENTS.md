@@ -85,6 +85,19 @@ If the user’s request does not map to an existing task, say so and ask whether
 - Input images: 384×384, normalized via `timm` data config (see `get_transform` in `predictor.py`)
 - Artifacts and class labels live under `data/` — do not hardcode paths outside `ROOT`-style resolution
 
+## Testing & demo recordings
+
+UI work is verified in two phases — a fast headless gate, then a small recorded set for the PR:
+
+1. **Flutter checks** — `cd ui && flutter analyze && flutter test`.
+2. **Playwright `check` project** (headless, no video, fast): `npx playwright test --project=check`.
+   This is the pass/fail gate for the functional E2E specs — run it and fix failures before recording anything.
+3. **Playwright `record` project** (a *smaller* curated subset, with video): `npx playwright test --project=record`.
+   Only the `ui/demos/record-*.spec.ts` clips record video. Add a new `record-*.spec.ts` when a task introduces a flow worth showing; otherwise re-record the existing relevant clip.
+4. **Publish the clips** — `./scripts/upload-demos.sh` (from `ui/`). It transcodes the recordings to `.mp4` (falls back to `.webm` if `ffmpeg` is absent), uploads them to a per-task prerelease (`demos-T###`) via `gh release upload`, and prints a markdown block of URLs. Paste that block into the PR body.
+
+GitHub's inline video player only accepts web-composer uploads (no public API), so we link release assets instead — they play in-browser when opened. Don't commit recordings: `ui/test-results/` is gitignored.
+
 ## When making changes
 
 - Prefer small, focused diffs

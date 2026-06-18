@@ -71,6 +71,12 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
     && apt-get install -y --no-install-recommends gh \
     && rm -rf /var/lib/apt/lists/*
 
+# ffmpeg: transcode Playwright .webm demo recordings to .mp4 so they play in
+# every browser (incl. Safari) when opened from a PR. Used by ui/scripts/upload-demos.sh.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
 USER vscode
 
 # Pre-warm the npm cache and Playwright browser download for the ui/ test

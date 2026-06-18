@@ -14,16 +14,37 @@ export default defineConfig({
     // phone-shaped. Dimensions are set directly (rather than spreading
     // devices['iPhone 14']) to keep the existing Chromium + CanvasKit setup.
     viewport: { width: 390, height: 844 },
-    video: { mode: 'on', size: { width: 390, height: 844 } },
     // Flutter Web's CanvasKit engine throws "Incorrect locale information
     // provided" under headless Chromium unless a locale is supplied.
     locale: 'en-US',
-    // Slow each action down so the recorded demo is easy to follow. Override
-    // per run with e.g. SLOWMO=0 npx playwright test.
-    launchOptions: {
-      slowMo: Number(process.env.SLOWMO ?? 500),
-    },
   },
+  // Two projects, two purposes:
+  //   * check  — the functional E2E specs, run fast and headless with NO video.
+  //              This is the pass/fail gate ("do the flows still work?").
+  //   * record — the curated `record-*.spec.ts` clips, run slowly WITH video so
+  //              the WebM can be uploaded to the PR (see scripts/upload-demos.sh).
+  // Run them explicitly: `npx playwright test --project=check` then
+  // `npx playwright test --project=record`. Bare `npx playwright test` runs both.
+  projects: [
+    {
+      name: 'check',
+      testIgnore: /record-.*\.spec\.ts$/,
+      use: {
+        video: 'off',
+        // No artificial slow-down: this run only needs to verify behavior.
+        launchOptions: { slowMo: Number(process.env.SLOWMO ?? 0) },
+      },
+    },
+    {
+      name: 'record',
+      testMatch: /record-.*\.spec\.ts$/,
+      use: {
+        video: { mode: 'on', size: { width: 390, height: 844 } },
+        // Slow each action down so the recorded demo is easy to follow.
+        launchOptions: { slowMo: Number(process.env.SLOWMO ?? 500) },
+      },
+    },
+  ],
   webServer: [
     // FastAPI inference backend (T001). Started from the repo root.
     {
