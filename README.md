@@ -1,12 +1,3 @@
----
-title: DriftID
-emoji: 🚗
-colorFrom: purple
-colorTo: pink
-sdk: docker
-app_port: 7860
-pinned: false
----
 
 <!-- The YAML block above is the Hugging Face Space config (Docker SDK) and MUST
      be the first thing in this file. `app_port` must match the port uvicorn binds
@@ -249,16 +240,23 @@ Further, the dataset was splitted into `training` set and `testing` set, with a 
 
 # 🧠 System Architecture
 
-At a high level, the system works as follows:
-  1. Input image uploaded by user
-  2. Preprocessing pipeline
-  3. Feature extraction (DINOv3 Vision Transformer)
-  4. Classification layer (Linear Classifier Neural Network trained on car embeddings
-  5: Prediction output (Top-k predicted car makes/models + confidence scores)
-
-<div align="center">
+<!-- <div align="center">
   <img width="500" height="721" alt="image" src="https://github.com/user-attachments/assets/8cb1f698-8551-4009-81c4-3673bfc3d4c2" />
-</div>
+</div> -->
+
+```
+User image (upload or URL)
+      ↓
+Preprocessing (384×384, timm normalization)
+      ↓
+DINOv3 ViT backbone  →  384-d embedding
+      ↓
+Linear classifier  →  class logits
+      ↓
+Top-k predictions + confidence scores
+      ↓
+FastAPI  →  Flutter Web UI
+```
 
 # ⚙️ Model Details
   - **Backbone:** Vision Transformer (ViT) / DINOv3 pretrained model
