@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'prediction.dart';
 
 /// How the source image for an identification was provided.
@@ -42,6 +45,15 @@ class HistoryEntry {
 
   /// Top prediction, or `null` when (defensively) there are none.
   Prediction? get top => predictions.isEmpty ? null : predictions.first;
+
+  /// Decoded preview bytes for an uploaded entry (its [imageRef] is a `data:`
+  /// URL), or `null` for URL entries / malformed data. Lets the Result tab
+  /// reopen a saved upload with no network call (US-10).
+  Uint8List? get imageBytes =>
+      source == HistorySource.upload ? decodeDataUrl(imageRef) : null;
+
+  /// The remote image URL for a URL entry, or `null` for uploads.
+  String? get imageUrl => source == HistorySource.url ? imageRef : null;
 
   /// Builds an entry stamped with the current time and a unique id.
   factory HistoryEntry.now({
@@ -99,5 +111,18 @@ class HistoryEntry {
       imageRef: imageRef,
       predictions: predictions,
     );
+  }
+}
+
+/// Decodes the base64 payload of a `data:` URL, or returns `null` when it isn't
+/// one (or is malformed) so previews fall back to the image placeholder. Shared
+/// by [HistoryEntry.imageBytes] and the Result tab reopen path (T016).
+Uint8List? decodeDataUrl(String dataUrl) {
+  final comma = dataUrl.indexOf(',');
+  if (comma == -1 || !dataUrl.startsWith('data:')) return null;
+  try {
+    return base64Decode(dataUrl.substring(comma + 1));
+  } catch (_) {
+    return null;
   }
 }

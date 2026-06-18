@@ -9,6 +9,7 @@ import '../models/prediction.dart';
 import '../services/api_client.dart';
 import '../services/history_store.dart';
 import '../services/image_downscale.dart';
+import '../services/result_controller.dart';
 import '../widgets/image_selection_card.dart';
 import '../widgets/url_input_field.dart';
 
@@ -20,12 +21,26 @@ const String kAppTagline =
     'Identify a car\'s make and model from a photo.';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, this.apiClient, this.historyStore});
+  const HomeScreen({
+    super.key,
+    this.apiClient,
+    this.historyStore,
+    this.resultController,
+    this.onResult,
+  });
 
   final ApiClient? apiClient;
 
   /// When provided, each successful identification is auto-saved here (US-08).
   final HistoryStore? historyStore;
+
+  /// When provided, a successful identification is published here so the Result
+  /// tab renders it (T016). Search itself no longer shows the result inline.
+  final ResultController? resultController;
+
+  /// Called after a successful identify so the shell can switch to the Result
+  /// tab (T016, US-14).
+  final VoidCallback? onResult;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -86,22 +101,35 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final List<Prediction> results;
       final HistorySource source;
+      Uint8List? resultBytes;
+      String? resultUrl;
       if (hasFile) {
         source = HistorySource.upload;
+        resultBytes = _bytes;
         results = await _api.predictBytes(
           _bytes!,
           filename: _filename ?? 'upload.jpg',
         );
       } else {
         source = HistorySource.url;
+        resultUrl = url;
         results = await _api.predictUrl(url);
-        setState(() => _previewUrl = url);
       }
       // Auto-save the successful identification (US-08). Fire-and-forget: don't
       // block the result view on persistence, and never surface storage errors.
+      // (Captures the current bytes synchronously, so the reset below is safe.)
       if (results.isNotEmpty) {
         _saveToHistory(source: source, url: url, results: results);
       }
+      // Publish the fresh result and hand off to the Result tab (T016, US-14),
+      // then reset Search so it's clean when revisited (US-13).
+      widget.resultController?.show(
+        bytes: resultBytes,
+        url: resultUrl,
+        predictions: results,
+      );
+      widget.onResult?.call();
+      _resetAfterIdentify();
     } on ApiException catch (e) {
       setState(() => _error = e.message);
     } catch (_) {
@@ -109,6 +137,20 @@ class _HomeScreenState extends State<HomeScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  /// Clears every input + local result state after a successful identify so
+  /// returning to Search shows the clean/empty state (US-13). [IndexedStack]
+  /// keeps this screen alive, so the reset must be explicit.
+  void _resetAfterIdentify() {
+    if (!mounted) return;
+    _urlController.clear();
+    setState(() {
+      _bytes = null;
+      _filename = null;
+      _previewUrl = null;
+      _error = null;
+    });
   }
 
   /// Persists a successful identification to history without blocking the result

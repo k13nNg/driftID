@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'app_shell.dart';
 import 'services/history_store.dart';
+import 'services/result_controller.dart';
 import 'services/settings_store.dart';
 
 void main() {
@@ -36,13 +37,21 @@ class DriftSpacing {
 const double kDriftRadius = 12;
 
 class DriftIDApp extends StatefulWidget {
-  const DriftIDApp({super.key, this.historyStore, this.settingsStore});
+  const DriftIDApp({
+    super.key,
+    this.historyStore,
+    this.settingsStore,
+    this.resultController,
+  });
 
   /// Injectable for tests; defaults to a real [HistoryStore] in production.
   final HistoryStore? historyStore;
 
   /// Injectable for tests; defaults to a real [SettingsStore] in production.
   final SettingsStore? settingsStore;
+
+  /// Injectable for tests; defaults to a real [ResultController] in production.
+  final ResultController? resultController;
 
   @override
   State<DriftIDApp> createState() => _DriftIDAppState();
@@ -51,6 +60,8 @@ class DriftIDApp extends StatefulWidget {
 class _DriftIDAppState extends State<DriftIDApp> {
   late final HistoryStore _historyStore = widget.historyStore ?? HistoryStore();
   late final SettingsStore _settingsStore = widget.settingsStore ?? SettingsStore();
+  late final ResultController _resultController =
+      widget.resultController ?? ResultController();
 
   @override
   void initState() {
@@ -64,6 +75,7 @@ class _DriftIDAppState extends State<DriftIDApp> {
   void dispose() {
     if (widget.historyStore == null) _historyStore.dispose();
     if (widget.settingsStore == null) _settingsStore.dispose();
+    if (widget.resultController == null) _resultController.dispose();
     super.dispose();
   }
 
@@ -81,6 +93,7 @@ class _DriftIDAppState extends State<DriftIDApp> {
           home: AppShell(
             historyStore: _historyStore,
             settingsStore: _settingsStore,
+            resultController: _resultController,
           ),
         );
       },
