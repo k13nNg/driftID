@@ -1,14 +1,20 @@
 import os
 from contextlib import asynccontextmanager
 from io import BytesIO
+from pathlib import Path
 
 import requests
 from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel, Field, HttpUrl
 
 from src.model.predictor import Predictor
+
+# Repo root: src/api/server.py -> parents[2]. Used to locate the optional
+# pre-built Flutter web bundle for single-origin hosting (e.g. on Hugging Face).
+ROOT = Path(__file__).resolve().parents[2]
 
 predictor: Predictor | None = None
 
@@ -92,6 +98,16 @@ async def predict_url(body: PredictUrlRequest):
         )
 
     return {"predictions": predictions}
+
+
+# Optionally serve the built Flutter web bundle from the same origin as the API,
+# so the whole app can run in a single container (Hugging Face Docker Space). The
+# UI is built with an empty API_BASE_URL, so its requests are relative (/predict)
+# and resolve to this server. Mounted LAST and only when the bundle exists, so it
+# never shadows the API routes above and API-only/local runs are unaffected.
+WEB_DIR = Path(os.environ.get("WEB_DIR", ROOT / "ui" / "build" / "web"))
+if WEB_DIR.is_dir():
+    app.mount("/", StaticFiles(directory=str(WEB_DIR), html=True), name="web")
 
 
 if __name__ == "__main__":

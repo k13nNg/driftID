@@ -1,5 +1,35 @@
 .git
 .DS_Store
+**/.DS_Store
 Miniconda3-latest-*.sh
 __pycache__
+**/__pycache__
 *.pyc
+*.pyo
+*.log
+
+# Training-only data: the serving image needs ONLY data/artifacts/
+# (linear_classifier.pt + classes.json). Everything else under data/ is the
+# dataset / features / manifests used to train, not to infer.
+data/car-dataset-200
+data/json
+data/train
+data/test
+features
+slurm_output_logs
+
+# Repo bookkeeping / docs — not needed in any image build context.
+bookkeeping
+docs
+plan.md
+
+# Flutter/Node build outputs & test scaffolding — the image rebuilds the web
+# bundle from source; node_modules/Playwright are dev/test-only.
+ui/build
+ui/.dart_tool
+ui/node_modules
+ui/test-results
+ui/playwright-report
+ui/blob-report
+ui/playwright/.cache
+ui/demos

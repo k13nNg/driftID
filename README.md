@@ -1,3 +1,17 @@
+---
+title: DriftID
+emoji: 🚗
+colorFrom: purple
+colorTo: pink
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
+<!-- The YAML block above is the Hugging Face Space config (Docker SDK) and MUST
+     be the first thing in this file. `app_port` must match the port uvicorn binds
+     in the Dockerfile. GitHub renders it as a small metadata table; HF consumes it. -->
+
 # 🚗 DriftID
 
 # 🚀 Overview
@@ -163,6 +177,33 @@ To produce a static release build (e.g. for hosting or the Playwright smoke test
 ```bash
 flutter build web                                       # output in ui/build/web
 python3 -m http.server 8080 --directory build/web       # serve the build
+```
+
+# ☁️ Deploy (Hugging Face Space)
+
+The whole app — Flutter Web UI **and** FastAPI inference backend — runs in a single container on a
+[Hugging Face Docker Space](https://huggingface.co/docs/hub/spaces-sdks-docker). The root
+[`Dockerfile`](Dockerfile) builds the web bundle (with an empty `API_BASE_URL` so the UI calls the
+API same-origin), then serves both from one `uvicorn` process on port `7860`.
+
+Live Space: **https://huggingface.co/spaces/Garendaxe/driftid**
+
+Deploy (or redeploy after changes):
+
+```bash
+deploy/push-to-hf.sh Garendaxe/driftid
+```
+
+The script stages only the files the image needs (serving code, model artifacts, UI source — not the
+training data) and uploads them with `hf upload`, which stores binaries via Xet automatically (no
+`git-lfs` required). Requires the Hugging Face CLI logged in once: `hf auth login`. HF rebuilds the
+image on each push — watch progress on the Space's **Logs** tab.
+
+To validate the image locally before pushing (HF Spaces run `linux/amd64`):
+
+```bash
+docker build --platform linux/amd64 -t driftid-hf .
+docker run --rm -p 7860:7860 driftid-hf            # open http://localhost:7860
 ```
 
 # 📊 Dataset
