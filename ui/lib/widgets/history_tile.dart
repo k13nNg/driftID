@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../main.dart';
 import '../models/history_entry.dart';
+import 'image_preview_content.dart';
 
 /// One row in the history list (US-09): a small thumbnail, the top make/model
 /// (+ year range), its confidence, and a relative timestamp. The whole row is
@@ -116,8 +117,9 @@ class HistoryTile extends StatelessWidget {
 }
 
 /// Fixed-size thumbnail for a saved entry. Decodes the stored data URL for
-/// uploads and loads the remote URL otherwise, falling back to the same flat
-/// car placeholder used by [ImagePreview] when an image can't be shown.
+/// uploads and loads the remote URL otherwise, rendering both through the shared
+/// [ImagePreviewContent] (T018) so a failed image degrades to the same flat car
+/// placeholder used by the image card and Result view.
 class _Thumbnail extends StatelessWidget {
   const _Thumbnail({required this.entry});
 
@@ -141,36 +143,26 @@ class _Thumbnail extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       alignment: Alignment.center,
-      child: _image(context),
-    );
-  }
-
-  Widget _image(BuildContext context) {
-    if (entry.source == HistorySource.url) {
-      return Image.network(
-        entry.imageRef,
+      child: SizedBox(
         width: _size,
         height: _size,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => _placeholder(context),
-      );
-    }
-
-    final bytes = _decodeDataUrl(entry.imageRef);
-    if (bytes == null) return _placeholder(context);
-    return Image.memory(
-      bytes,
-      width: _size,
-      height: _size,
-      fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) => _placeholder(context),
+        child: _content(),
+      ),
     );
   }
 
-  Widget _placeholder(BuildContext context) {
-    return Icon(
-      Icons.directions_car_outlined,
-      color: Theme.of(context).colorScheme.onSurfaceVariant,
+  Widget _content() {
+    if (entry.source == HistorySource.url) {
+      return ImagePreviewContent(
+        url: entry.imageRef,
+        fit: BoxFit.cover,
+        compact: true,
+      );
+    }
+    return ImagePreviewContent(
+      bytes: _decodeDataUrl(entry.imageRef),
+      fit: BoxFit.cover,
+      compact: true,
     );
   }
 }
