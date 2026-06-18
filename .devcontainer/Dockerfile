@@ -86,6 +86,12 @@ RUN cd /tmp/ui-deps \
     && cd / \
     && rm -rf /tmp/ui-deps
 
+# Cursor CLI (`cursor-agent`) — lets the orchestrator auto-dispatch a headless
+# implement-task agent at container start. The installer drops the binary in
+# ~/.cursor/bin; auth (CURSOR_API_KEY) is injected at runtime, never baked.
+RUN curl https://cursor.com/install -fsS | bash
+ENV PATH=/home/vscode/.cursor/bin:${PATH}
+
 # ----------------------------------------------------------------------------
 # sprint-base: per-sprint WARM SEED on top of dev (orchestrator run mode).
 # Bakes a PINNED commit at a NON-workspace path (/opt/seed/driftID) plus warm
@@ -113,7 +119,8 @@ USER root
 RUN mkdir -p /workspaces/driftID /opt/seed \
     && chown -R vscode:vscode /workspaces /opt/seed
 COPY .devcontainer/orchestrator-entrypoint.sh /usr/local/bin/orchestrator-entrypoint.sh
-RUN chmod +x /usr/local/bin/orchestrator-entrypoint.sh
+COPY .devcontainer/update-workspace.sh /usr/local/bin/update-workspace.sh
+RUN chmod +x /usr/local/bin/orchestrator-entrypoint.sh /usr/local/bin/update-workspace.sh
 
 USER vscode
 

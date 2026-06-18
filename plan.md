@@ -164,18 +164,19 @@ Worker image = `driftid-sprint:S###`. Auth (gh token) injected at runtime, never
 
 ## Follow-ups (next iteration)
 
-> Captured after the orchestrator's first successful run. Not yet implemented.
+> Captured after the orchestrator's first successful run. **Implemented.**
 
-- [ ] **On-start update script.** Have the container run a small start script that `cd /workspaces/driftID`
-      then pulls latest `main`. The warm-start entrypoint already does this (step 2: `git fetch && switch main
-      && pull --ff-only`); extract it into an explicit, named start script so it's obvious and reusable, and
-      confirm it always runs on container start.
-- [ ] **Auto-dispatch the agent on `up`.** `./orchestrate.sh up <T###>` should kick off the `implement-task`
-      agent for the task automatically (instead of just parking at `sleep infinity` and waiting for a human to
-      attach + run the skill).
-- [ ] **Keep a non-agent path as `up_classic`.** Preserve the current "provision + park for manual attach"
-      behavior under a separate subcommand `./orchestrate.sh up_classic <T###>` for when we don't want an
-      agent auto-dispatched.
+- [x] **On-start update script.** The "cd + fast-forward `main`" step is extracted into an explicit,
+      reusable script ([`.devcontainer/update-workspace.sh`](.devcontainer/update-workspace.sh)) that the
+      entrypoint invokes on every container start (after seeding) and that can be re-run by hand after
+      attaching. Baked into `sprint-base` at `/usr/local/bin/update-workspace.sh`.
+- [x] **Auto-dispatch the agent on `up`.** `./orchestrate.sh up <T###>` now sets `DISPATCH_AGENT=1` and
+      injects `CURSOR_API_KEY`; the entrypoint runs the headless Cursor CLI (`cursor-agent -p --force
+      --trust`) with a prompt to run the `implement-task` skill for the task, then parks for attach so a
+      human can also jump in. The CLI is installed in the `dev` image layer. Requires `CURSOR_API_KEY`
+      (errors out with a hint to use `up_classic` otherwise); `AGENT_MODEL` optionally picks the model.
+- [x] **Keep a non-agent path as `up_classic`.** `./orchestrate.sh up_classic <T###>` provisions + warm-starts
+      + parks for manual attach with **no** agent dispatched (the original `up` behavior).
 
 ## Explicitly out of scope (for now)
 - GPU scheduling (env is CPU-only: `faiss-cpu` + CPU PyTorch — no contention).

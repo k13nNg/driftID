@@ -1,3 +1,19 @@
+---
+title: DriftID
+emoji: 🚗
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
+<!--
+The YAML block above configures the Hugging Face Space (Docker SDK). It is
+ignored by GitHub's renderer. See "Deploy to Hugging Face Spaces" below and
+docs/deploy-huggingface.md for the full deploy guide.
+-->
+
 # 🚗 DriftID
 
 # 🚀 Overview
@@ -61,8 +77,10 @@ task** so multiple agents code in parallel. The host-side driver is `orchestrate
 
 ```bash
 ./orchestrate.sh build-sprint S002 $(git rev-parse origin/main) --push   # per-sprint seed
-./orchestrate.sh up T012        # provision + warm-start a task container
-./orchestrate.sh down T012      # tear down after the PR merges
+export CURSOR_API_KEY=sk_...     # so the container can run the agent
+./orchestrate.sh up T012         # warm-start + dispatch the implement-task agent
+./orchestrate.sh up_classic T012 # warm-start only, no agent (manual attach)
+./orchestrate.sh down T012       # tear down after the PR merges
 ```
 
 See **[docs/orchestrator.md](docs/orchestrator.md)** for the full guide — image layering, auth
@@ -164,6 +182,22 @@ To produce a static release build (e.g. for hosting or the Playwright smoke test
 flutter build web                                       # output in ui/build/web
 python3 -m http.server 8080 --directory build/web       # serve the build
 ```
+
+# ☁️ Deploy to Hugging Face Spaces
+
+DriftID can run as a **single Docker container** that serves both the Flutter web
+UI and the FastAPI inference API from one origin on port `7860` — the format a
+Hugging Face **Docker** Space expects.
+
+```bash
+docker build -t driftid .
+docker run --rm -p 7860:7860 driftid   # open http://localhost:7860
+```
+
+To deploy, push the repo to a Docker Space (the root `Dockerfile` + the
+`README.md` frontmatter drive the build). See
+**[docs/deploy-huggingface.md](docs/deploy-huggingface.md)** for the full guide
+(Space creation, git remote / token setup, and gotchas).
 
 # 📊 Dataset
 

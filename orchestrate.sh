@@ -10,11 +10,14 @@
 #   * GH_TOKEN injected at runtime for private fetch/push
 #
 # Usage:
-#   ./orchestrate.sh up    <T###>            start a task container
+#   ./orchestrate.sh up    <T###>            start a task container AND dispatch
+#                                            the headless implement-task agent
+#   ./orchestrate.sh up_classic <T###>       start a task container WITHOUT an
+#                                            agent (warm-start + park for attach)
 #   ./orchestrate.sh down  <T###> [--force]  stop+remove container and volume
 #   ./orchestrate.sh ls                      list task containers
 #   ./orchestrate.sh attach <T###>           open a shell (and print attach hint)
-#   ./orchestrate.sh logs  <T###>            follow warm-start logs
+#   ./orchestrate.sh logs  <T###>            follow warm-start / agent logs
 #   ./orchestrate.sh build-dev    [--push]   build (item 1) the dev image
 #   ./orchestrate.sh build-sprint <S###> <commit-sha> [--push] [--no-cache]   build the sprint seed
 #       BOTH the sprint name and the commit/ref are required (no default). The ref
@@ -28,6 +31,9 @@
 #   IMAGE=driftid-sprint:$SPRINT          image used by `up`
 #   API_PORT=8000  WEB_PORT=8080          constant in-container ports
 #   GH_TOKEN=<token>                      else falls back to `gh auth token`
+#   CURSOR_API_KEY=<key>                  required by `up` to dispatch the agent
+#   AGENT_MODEL=<model>                   optional model for the dispatched agent
+#                                         (default: the Cursor CLI's default)
 # ===========================================================================
 set -euo pipefail
 
@@ -66,30 +72,56 @@ resolve_token() {
   gh auth token 2>/dev/null || die "no GH_TOKEN set and 'gh auth token' failed; export GH_TOKEN"
 }
 
+# Cursor API key for headless agent dispatch (no fallback — must be exported).
+resolve_api_key() {
+  [ -n "${CURSOR_API_KEY:-}" ] || return 1
+  echo "$CURSOR_API_KEY"
+}
+
 container_exists() { docker ps -a --format '{{.Names}}' | grep -qx "$1"; }
 container_running() { docker ps --format '{{.Names}}' | grep -qx "$1"; }
 
 # --- commands --------------------------------------------------------------
 
+# cmd_up <dispatch> <T###>
+#   dispatch=1 -> inject CURSOR_API_KEY and auto-run the implement-task agent
+#   dispatch=0 -> classic: warm-start only, park for a human to attach
 cmd_up() {
   need docker
+  local dispatch="${1:-1}"; shift || true
   local task c v tok
   task="$(norm_task "${1:-}")"; c="$(cname "$task")"; v="$(vname "$task")"
   container_exists "$c" && die "$c already exists — use 'down $task' first, or 'attach $task'"
   tok="$(resolve_token)"
 
-  docker volume create "$v" >/dev/null
-  docker run -d --name "$c" \
-    -v "$v:$WORK_IN_CONTAINER" \
-    -e GH_TOKEN="$tok" \
-    -e TASK_ID="$task" \
-    -e REPO_URL="$REPO_URL" \
-    -e API_PORT="$API_PORT" \
-    -e WEB_PORT="$WEB_PORT" \
-    "$IMAGE" >/dev/null
+  local -a run_args=(
+    -d --name "$c"
+    -v "$v:$WORK_IN_CONTAINER"
+    -e GH_TOKEN="$tok"
+    -e TASK_ID="$task"
+    -e REPO_URL="$REPO_URL"
+    -e API_PORT="$API_PORT"
+    -e WEB_PORT="$WEB_PORT"
+    -e DISPATCH_AGENT="$dispatch"
+  )
 
-  echo "started $c  (image=$IMAGE  volume=$v)"
-  echo "  warm-start log : ./orchestrate.sh logs $task"
+  if [ "$dispatch" = "1" ]; then
+    local key
+    key="$(resolve_api_key)" || die "agent dispatch needs CURSOR_API_KEY (export it, or use 'up_classic $task' for manual attach)"
+    run_args+=( -e CURSOR_API_KEY="$key" )
+    [ -n "${AGENT_MODEL:-}" ] && run_args+=( -e AGENT_MODEL="$AGENT_MODEL" )
+  fi
+
+  docker volume create "$v" >/dev/null
+  docker run "${run_args[@]}" "$IMAGE" >/dev/null
+
+  if [ "$dispatch" = "1" ]; then
+    echo "started $c  (image=$IMAGE  volume=$v) — dispatching implement-task agent for $task"
+    echo "  agent log      : ./orchestrate.sh logs $task"
+  else
+    echo "started $c  (image=$IMAGE  volume=$v) — classic mode (no agent)"
+    echo "  warm-start log : ./orchestrate.sh logs $task"
+  fi
   echo "  attach (Cursor): Cmd+Shift+P -> Dev Containers: Attach to Running Container -> $c"
   echo "  attach (shell) : ./orchestrate.sh attach $task"
 }
@@ -236,7 +268,8 @@ usage() {
 main() {
   local sub="${1:-}"; shift || true
   case "$sub" in
-    up)            cmd_up "$@" ;;
+    up)                  cmd_up 1 "$@" ;;
+    up_classic|up-classic) cmd_up 0 "$@" ;;
     down)          cmd_down "$@" ;;
     ls|list)       cmd_ls "$@" ;;
     attach)        cmd_attach "$@" ;;

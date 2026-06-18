@@ -38,24 +38,30 @@ Bakes a warm seed (a clone of the given commit + a prebuilt Flutter web bundle +
 backbone) so task containers start fast. The commit is **required** — here we pin the current tip
 of `main`. Re-run with a new commit to refresh the seed.
 
-### 4. Start a task container
+### 4. Start a task container (auto-dispatches the agent)
 
 ```bash
+export CURSOR_API_KEY=sk_...     # needed so the container can run the agent
 ./orchestrate.sh up T012
 ```
 
 Creates the `driftid-T012` volume + container, seeds the workspace, brings it up to date with
-`main`, runs `flutter pub get`, and parks ready. Watch it warm up with `./orchestrate.sh logs T012`.
+`main`, runs `flutter pub get`, then **dispatches a headless `implement-task` agent** for the task.
+Watch it work with `./orchestrate.sh logs T012`.
+
+> No `CURSOR_API_KEY` (or you don't want an agent)? Use `./orchestrate.sh up_classic T012` — it does
+> the same warm-start but parks for manual attach with no agent.
 
 ### 5. Attach and do the work
 
-In Cursor/VS Code: **Cmd+Shift+P → Dev Containers: Attach to Running Container → `driftid-T012`**.
+You can still attach while the agent runs (or in `up_classic` mode, to drive it yourself). In
+Cursor/VS Code: **Cmd+Shift+P → Dev Containers: Attach to Running Container → `driftid-T012`**.
 
 The repo lives at **`/workspaces/driftID`** (on the per-task volume). The image sets that as its
 `WORKDIR`, so terminals open there; if the editor lands in the container home instead, use
-**File → Open Folder → `/workspaces/driftID`**. Then run the
+**File → Open Folder → `/workspaces/driftID`**. To drive it by hand, run the
 [`implement-task`](../.cursor/skills/implement-task/SKILL.md) skill for the task — it branches,
-implements, tests, and opens the PR. (Repeat steps 4–5 for each task you want in flight.)
+implements, tests, and opens the PR. (Repeat step 4 for each task you want in flight.)
 
 ### 6. Tear down (after the PR merges)
 
@@ -99,6 +105,8 @@ base  (conda env, Flutter SDK, Playwright, Chromium)   ← rebuild only on dep c
 - **Docker Desktop** running on the host.
 - **`gh` logged in** so `gh auth token` resolves a token with `repo` scope (used as the BuildKit
   clone secret). `orchestrate.sh` falls back to `gh auth token` when `GH_TOKEN` is unset.
+- **`CURSOR_API_KEY` exported** if you want `up` to auto-dispatch the agent (get one from Cursor →
+  Settings → API Keys). Not needed for `up_classic`. The key is injected at runtime only, never baked.
 - **For `--push` to GHCR**, log Docker into GHCR specifically (plain `docker login` only touches
   Docker Hub):
 
@@ -136,6 +144,8 @@ current tip of main:
 | `REPO_URL` | `https://github.com/k13nNg/driftID.git` | repo cloned into the seed / at runtime |
 | `API_PORT` / `WEB_PORT` | `8000` / `8080` | constant in-container ports |
 | `GH_TOKEN` | (from `gh auth token`) | clone + runtime auth |
+| `CURSOR_API_KEY` | (none) | required by `up` to dispatch the headless agent |
+| `AGENT_MODEL` | (CLI default) | optional model for the dispatched agent |
 
 ## Resetting / re-pinning a seed
 
@@ -157,16 +167,19 @@ at the same commit.
 ## Running a task container
 
 ```bash
-./orchestrate.sh up T012        # create volume + container, warm-start, park for attach
-./orchestrate.sh logs T012      # follow the warm-start (seed → fetch main → pub get)
-./orchestrate.sh ls             # list task containers
-./orchestrate.sh attach T012    # open a shell (or use Attach to Running Container)
-./orchestrate.sh down T012      # stop+remove container AND volume; guards unsynced work
+./orchestrate.sh up T012         # warm-start + dispatch the implement-task agent
+./orchestrate.sh up_classic T012 # warm-start only, park for manual attach (no agent)
+./orchestrate.sh logs T012       # follow the warm-start (seed → fetch main → pub get) + agent
+./orchestrate.sh ls              # list task containers
+./orchestrate.sh attach T012     # open a shell (or use Attach to Running Container)
+./orchestrate.sh down T012       # stop+remove container AND volume; guards unsynced work
 ```
 
-`up` does all the environment plumbing then parks the container at `sleep infinity` — it does
-**not** auto-start an agent. `down` refuses to destroy a volume that has uncommitted changes or
-unpushed commits unless you pass `--force`.
+`up` does the environment plumbing, then dispatches a **headless `implement-task` agent** via the
+Cursor CLI (`cursor-agent -p --force --trust`) and parks the container at `sleep infinity` so you
+can attach alongside it. It needs `CURSOR_API_KEY` exported (set `AGENT_MODEL` to pick a model).
+`up_classic` skips the agent entirely and just parks for manual attach. `down` refuses to destroy a
+volume that has uncommitted changes or unpushed commits unless you pass `--force`.
 
 ### Ports & networking
 
@@ -183,15 +196,19 @@ crash-safety net; pushing your branch is the real sync mechanism. `down` removes
 
 1. **Build images** — `build-dev` (rare), `build-sprint` (once per sprint).
 2. **`./orchestrate.sh up T###`** — provisions the volume + container, seeds from
-   `/opt/seed/driftID`, brings the workspace to latest `main`, runs `flutter pub get`, wires the
-   injected token into git, and parks ready on `main`.
-3. **Attach** in Cursor/VS Code → _Attach to Running Container_ → `driftid-T###`.
-4. **Run the [`implement-task`](../.cursor/skills/implement-task/SKILL.md) skill** for the task. It
-   branches `<owner>/T###` off main, implements, runs `flutter analyze`/`test` + Playwright demos,
-   ticks the task criteria, moves the task to `done/`, commits, pushes, and opens the PR.
+   `/opt/seed/driftID`, runs the on-start [`update-workspace.sh`](../.devcontainer/update-workspace.sh)
+   (`cd` + fast-forward `main` + `flutter pub get`), wires the injected token into git, then
+   **dispatches the headless `implement-task` agent** for the task. (Use `up_classic` to skip the
+   agent and drive it yourself.)
+3. **(Optional) Attach** in Cursor/VS Code → _Attach to Running Container_ → `driftid-T###` to watch
+   or take over.
+4. The dispatched agent (or you, via the
+   [`implement-task`](../.cursor/skills/implement-task/SKILL.md) skill) branches `<owner>/T###` off
+   main, implements, runs `flutter analyze`/`test` + Playwright demos, ticks the task criteria, moves
+   the task to `done/`, commits, pushes, and opens the PR.
 5. **Merge → main**, then `./orchestrate.sh down T###`.
 
-Parallelism comes from running multiple `up`s and attaching an agent to each.
+Parallelism comes from running multiple `up`s — each container runs its own agent.
 
 ## CI
 

@@ -1,5 +1,36 @@
+# Keep the Docker / Hugging Face Spaces build context small. Only the API code
+# (src/), the small committed model artifacts (data/artifacts/), and the Flutter
+# UI source (ui/, minus generated dirs) are needed to build the image.
 .git
+.github
+.devcontainer
+.cursor
 .DS_Store
-Miniconda3-latest-*.sh
+**/.DS_Store
 __pycache__
+**/__pycache__
 *.pyc
+*.pyo
+*.pyd
+Miniconda3-latest-*.sh
+
+# Docs / planning — not needed at runtime.
+bookkeeping
+docs
+plan.md
+orchestrate.sh
+
+# Large dataset manifests — only data/artifacts/ is needed for inference.
+data/json
+data/train
+data/test
+
+# Flutter generated / test output — the web bundle is rebuilt in the image.
+ui/build
+ui/node_modules
+ui/test
+ui/test-results
+ui/demos
+ui/playwright.config.ts
+ui/package.json
+ui/package-lock.json

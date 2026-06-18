@@ -1,0 +1,9 @@
+# Runtime deps for the single-container (Hugging Face Spaces) deploy.
+# torch / torchvision are installed separately from the CPU wheel index in the
+# Dockerfile to keep the image small (no CUDA). Mirrors .devcontainer/environment.yml.
+fastapi
+uvicorn[standard]
+python-multipart
+pillow
+requests
+timm==1.0.27

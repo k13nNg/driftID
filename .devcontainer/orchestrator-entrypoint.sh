@@ -53,26 +53,48 @@ else
 fi
 
 # --- 2. bring the workspace up to date with main ---------------------------
+# Delegated to a standalone start script so the "cd + fast-forward main" step
+# is explicit and reusable (e.g. re-run by hand after attaching).
+WORK="$WORK" REPO_URL="$REPO_URL" /usr/local/bin/update-workspace.sh
+
 cd "$WORK"
-git remote set-url origin "$REPO_URL"
-log "fetching origin"
-git fetch --prune origin
-git switch main 2>/dev/null || git checkout -B main origin/main
-git pull --ff-only origin main || log "WARN: could not fast-forward main (local commits?); leaving as-is"
-
-# --- 3. cheap incremental warm build ---------------------------------------
-if [ -f ui/pubspec.yaml ]; then
-  ( cd ui && flutter pub get ) || log "WARN: flutter pub get failed"
-fi
-
-# --- 4. ready; hand off to the agent ---------------------------------------
 log "ready on branch $(git rev-parse --abbrev-ref HEAD) @ $(git rev-parse --short HEAD)"
 log "in-container ports: API=${API_PORT:-8000} WEB=${WEB_PORT:-8080} (reach via Attach to Running Container)"
-if [ -n "${TASK_ID:-}" ]; then
-  log "attach to this container and run the implement-task skill for ${TASK_ID}."
-else
-  log "no TASK_ID set; attach and run implement-task <T###> when ready."
-fi
+
+# --- 3. dispatch the implement-task agent, or park for manual attach --------
+# `up` sets DISPATCH_AGENT=1 and injects CURSOR_API_KEY; `up_classic` leaves it
+# unset so the container just parks for a human to attach and drive the skill.
+dispatch_agent() {
+  [ "${DISPATCH_AGENT:-0}" = "1" ] || { log "classic mode: no agent dispatched."; return 1; }
+  if ! command -v cursor-agent >/dev/null 2>&1; then
+    log "WARN: DISPATCH_AGENT=1 but cursor-agent not found; parking for manual attach."; return 1
+  fi
+  if [ -z "${CURSOR_API_KEY:-}" ]; then
+    log "WARN: DISPATCH_AGENT=1 but CURSOR_API_KEY not set; parking for manual attach."; return 1
+  fi
+  if [ -z "${TASK_ID:-}" ]; then
+    log "WARN: DISPATCH_AGENT=1 but TASK_ID not set; parking for manual attach."; return 1
+  fi
+
+  local prompt
+  prompt="Run the implement-task skill to implement ${TASK_ID} end-to-end: read the \
+context (user stories -> sprint -> task + deps), branch off main, implement only what \
+the task requires, run the task's verification commands, tick the acceptance criteria, \
+move the task to done/, then commit, push, and open a pull request. Do not merge."
+
+  local -a model_args=()
+  [ -n "${AGENT_MODEL:-}" ] && model_args=(--model "$AGENT_MODEL")
+
+  log "dispatching implement-task agent for ${TASK_ID} (model=${AGENT_MODEL:-CLI default})"
+  # Headless: -p print mode, --force to apply edits/run commands, --trust to
+  # skip the workspace-trust prompt. Backgrounded so the container parks for
+  # attach while the agent works; its output streams to `docker logs`.
+  cursor-agent -p --force --trust --workspace "$WORK" "${model_args[@]}" "$prompt" &
+  log "agent dispatched (PID $!); follow it with: docker logs -f <container>"
+  return 0
+}
+
+dispatch_agent || log "attach and run the implement-task skill for ${TASK_ID:-<T###>} when ready."
 
 # Keep PID 1 alive so the container stays up for attach/exec.
 exec sleep infinity
