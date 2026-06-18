@@ -51,8 +51,9 @@ Creates the `driftid-T012` volume + container, seeds the workspace, brings it up
 
 In Cursor/VS Code: **Cmd+Shift+P → Dev Containers: Attach to Running Container → `driftid-T012`**.
 
-The repo lives at **`/workspaces/driftID`** (on the per-task volume). The image sets that as its
-`WORKDIR`, so terminals open there; if the editor lands in the container home instead, use
+The repo lives at **`/workspaces/driftID`** (on the per-task volume). `up` writes a host-side
+attached-container config so the attach opens that folder automatically (terminals also open there
+via the image `WORKDIR`); if the editor ever lands in the container home instead, use
 **File → Open Folder → `/workspaces/driftID`**. Then run the
 [`implement-task`](../.cursor/skills/implement-task/SKILL.md) skill for the task — it branches,
 implements, tests, and opens the PR. (Repeat steps 4–5 for each task you want in flight.)
@@ -210,3 +211,4 @@ Parallelism comes from running multiple `up`s and attaching an agent to each.
 | Reseed didn't pick up new code | You re-ran with a moving ref and hit the cache. Pin the commit SHA, or pass `--no-cache`. See the cache-trap note above. |
 | `could not create leading directories of '/opt/seed/...'` (build) | Build the current Dockerfile — `sprint-base` creates `/opt/seed` as vscode-owned before cloning. |
 | `up` says repo isn't there | Check `./orchestrate.sh logs <T###>` — the seed/fetch runs at container start and may still be in progress or have logged a warning. |
+| Attach opens `/home/vscode`, not the repo | Cursor's attach folder comes from a host-side attached-container config, not the image `WORKDIR`/label. `up` now writes `…/globalStorage/anysphere.remote-containers/nameConfigs/driftid-<T###>.json` with `workspaceFolder`. If you started the container before this change (or on another host), re-run `down`+`up`, or `F1 → Dev Containers: Open Attached Container Configuration File` and set `"workspaceFolder": "/workspaces/driftID"`. |

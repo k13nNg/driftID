@@ -69,6 +69,34 @@ resolve_token() {
 container_exists() { docker ps -a --format '{{.Names}}' | grep -qx "$1"; }
 container_running() { docker ps --format '{{.Names}}' | grep -qx "$1"; }
 
+# Cursor's "Attach to Running Container" decides which folder to open from a
+# host-side per-container "attached configuration file" (anysphere.remote-containers'
+# nameConfigs/<container>.json). WORKDIR and the image's devcontainer.metadata label
+# do NOT drive this; without the file the attach lands in the container home
+# (/home/vscode). We write/remove that file on up/down so attach opens the repo.
+attach_config_file() {
+  local container="$1" base
+  case "$(uname -s)" in
+    Darwin) base="$HOME/Library/Application Support/Cursor/User/globalStorage" ;;
+    *)      base="${XDG_CONFIG_HOME:-$HOME/.config}/Cursor/User/globalStorage" ;;
+  esac
+  # Container names here are [A-Za-z0-9-] only, so encodeURIComponent is identity.
+  echo "$base/anysphere.remote-containers/nameConfigs/${container}.json"
+}
+
+write_attach_config() {
+  local container="$1" f; f="$(attach_config_file "$container")"
+  mkdir -p "$(dirname "$f")" 2>/dev/null || { echo "  note: could not create attach config dir; attach may open container home" >&2; return 0; }
+  printf '{\n  "workspaceFolder": "%s"\n}\n' "$WORK_IN_CONTAINER" > "$f" 2>/dev/null \
+    && echo "  wrote attach config: opens $WORK_IN_CONTAINER on 'Attach to Running Container'" \
+    || echo "  note: could not write attach config ($f); attach may open container home" >&2
+}
+
+remove_attach_config() {
+  local container="$1" f; f="$(attach_config_file "$container")"
+  rm -f "$f" 2>/dev/null || true
+}
+
 # --- commands --------------------------------------------------------------
 
 cmd_up() {
@@ -87,6 +115,8 @@ cmd_up() {
     -e API_PORT="$API_PORT" \
     -e WEB_PORT="$WEB_PORT" \
     "$IMAGE" >/dev/null
+
+  write_attach_config "$c"
 
   echo "started $c  (image=$IMAGE  volume=$v)"
   echo "  warm-start log : ./orchestrate.sh logs $task"
@@ -118,6 +148,7 @@ cmd_down() {
 
   docker rm -f "$c" >/dev/null 2>&1 || true
   docker volume rm "$v" >/dev/null 2>&1 || true
+  remove_attach_config "$c"
   echo "removed container $c and volume $v"
 }
 
