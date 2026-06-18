@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import {
   HOUR_MS,
   MINUTE_MS,
-  REMOTE_IMAGE_REF,
+  SEED_CAR_IMAGE,
   seedHistory,
   type SeedEntry,
 } from './helpers/seed-history';
@@ -15,14 +15,14 @@ const entries: SeedEntry[] = [
     id: 'seed-audi',
     agoMs: 2 * HOUR_MS, // older → second in the list
     source: 'url',
-    imageRef: REMOTE_IMAGE_REF,
+    imageRef: SEED_CAR_IMAGE,
     predictions: [{ class: 'audi_a7-gen_2010_2014', confidence: 0.91 }],
   },
   {
     id: 'seed-bmw',
     agoMs: 5 * MINUTE_MS, // newer → first in the list
     source: 'url',
-    imageRef: REMOTE_IMAGE_REF,
+    imageRef: SEED_CAR_IMAGE,
     predictions: [{ class: 'bmw_m3-gen_2014_2018', confidence: 0.88 }],
   },
 ];
