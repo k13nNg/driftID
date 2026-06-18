@@ -1,10 +1,11 @@
 import { test, expect } from '@playwright/test';
 import { REMOTE_IMAGE_REF, seedHistory, type SeedEntry } from './helpers/seed-history';
 
-// US-10: reopening a saved identification shows the full top-k result view again
-// — reconstructed entirely from storage, with NO inference call. We seed one
-// entry, guard every request, reopen it, assert the complete result is shown,
-// and finally assert the backend was never hit.
+// US-10/US-14: reopening a saved identification publishes it into the dedicated
+// Result tab, marked "saved" — reconstructed entirely from storage, with NO
+// inference call. We seed one entry, guard every request, reopen it, assert the
+// complete result is shown on the Result tab, and finally assert the backend was
+// never hit.
 const entry: SeedEntry = {
   id: 'seed-reopen',
   agoMs: 0,
@@ -42,11 +43,11 @@ test('reopen a saved result without inference', async ({ page }) => {
   await expect(tile).toBeVisible({ timeout: 15_000 });
   await tile.click();
 
-  // Full saved-result view: the "Saved result" screen with the best match and
-  // the rest of the top-k (US-10) — all from storage.
-  await expect(
-    page.getByRole('heading', { name: 'Saved result' }),
-  ).toBeVisible({ timeout: 15_000 });
+  // Full saved-result view on the Result tab: the "saved" badge plus the best
+  // match and the rest of the top-k (US-10/US-14) — all from storage.
+  await expect(page.getByText('Saved result').first()).toBeVisible({
+    timeout: 15_000,
+  });
   await expect(page.getByText('Best match')).toBeVisible();
   await expect(page.getByText(/Audi A7/)).toBeVisible();
   await expect(page.getByText(/Audi A6/)).toBeVisible(); // a lower-ranked row
