@@ -9,9 +9,13 @@ import '../models/prediction.dart';
 import '../services/api_client.dart';
 import '../services/history_store.dart';
 import '../services/image_downscale.dart';
-import '../widgets/result_view.dart';
+import '../widgets/image_selection_card.dart';
+import '../widgets/url_input_field.dart';
 
 /// One-line summary of what the app does (US-05). Mirrors the README intent.
+///
+/// No longer rendered on Search (T015 decluttered the screen) but kept defined
+/// for reuse elsewhere (e.g. Settings/About).
 const String kAppTagline =
     'Identify a car\'s make and model from a photo.';
 
@@ -36,7 +40,6 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _previewUrl;
   bool _loading = false;
   String? _error;
-  List<Prediction> _predictions = const [];
 
   @override
   void dispose() {
@@ -61,7 +64,6 @@ class _HomeScreenState extends State<HomeScreen> {
       _bytes = file.bytes;
       _filename = file.name;
       _previewUrl = null;
-      _predictions = const [];
       _error = null;
     });
   }
@@ -79,7 +81,6 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _loading = true;
       _error = null;
-      _predictions = const [];
     });
 
     try {
@@ -96,7 +97,6 @@ class _HomeScreenState extends State<HomeScreen> {
         results = await _api.predictUrl(url);
         setState(() => _previewUrl = url);
       }
-      setState(() => _predictions = results);
       // Auto-save the successful identification (US-08). Fire-and-forget: don't
       // block the result view on persistence, and never surface storage errors.
       if (results.isNotEmpty) {
@@ -157,29 +157,12 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Semantics(
-                  header: true,
-                  child: Text(kAppTagline, style: theme.textTheme.titleMedium),
-                ),
-                const SizedBox(height: DriftSpacing.lg),
-                ResultView(
+                ImageSelectionCard(
                   bytes: _bytes,
                   url: _previewUrl,
-                  predictions: _predictions,
+                  onPick: _pickImage,
+                  enabled: !_loading,
                 ),
-                const SizedBox(height: DriftSpacing.md),
-                OutlinedButton.icon(
-                  key: const Key('upload-button'),
-                  onPressed: _loading ? null : _pickImage,
-                  icon: const Icon(Icons.upload_file),
-                  label: const Text('Upload image'),
-                ),
-                if (_filename != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: DriftSpacing.sm),
-                    child: Text('Selected: $_filename',
-                        style: theme.textTheme.bodySmall),
-                  ),
                 const SizedBox(height: DriftSpacing.md),
                 const Row(children: [
                   Expanded(child: Divider()),
@@ -190,15 +173,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   Expanded(child: Divider()),
                 ]),
                 const SizedBox(height: DriftSpacing.md),
-                TextField(
-                  key: const Key('url-field'),
+                UrlInputField(
                   controller: _urlController,
                   enabled: !_loading,
-                  keyboardType: TextInputType.url,
-                  decoration: const InputDecoration(
-                    labelText: 'Image URL',
-                    hintText: 'https://example.com/car.jpg',
-                  ),
                   onChanged: (_) {
                     if (_bytes != null) {
                       setState(() {
