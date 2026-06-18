@@ -45,7 +45,7 @@ Work is planned in `bookkeeping/task_management/`:
 - Some acceptance criteria are **Human:** (reviewer sign-off) — do not mark done without explicit approval.
 - When implementing work, follow the active task spec; update checkboxes only when criteria are actually met.
 
-**Active sprint:** [S003 — Settings & focused Search](bookkeeping/task_management/S003.md) — settings store + theme modes (T012), theme control UI (T013), image selection card (T014), URL input + Search relayout (T015), Result tab + shared result surface (T016), live URL image preview + shared preview component (T018), demo recording + regression (T017).
+**Active sprint:** [S003 — Settings & focused Search](bookkeeping/task_management/S003.md) — settings store + theme modes (T012), theme control UI (T013), image selection card (T014), URL input + Search relayout (T015), Result tab + shared result surface (T016), live URL image preview + shared preview component (T018), light-theme palette cleanup (T019), demo recording + regression (T017).
 
 **Previous sprint:** [S002 — Prediction history & navigation](bookkeeping/task_management/S002.md) (done) — bottom tab nav (T005), local history store + auto-save (T006), browse history (T007), reopen result (T008), manage/clear (T009), history demo recording (T010), pre-seeded history E2E (T011).
 
