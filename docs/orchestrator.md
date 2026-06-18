@@ -52,8 +52,10 @@ Creates the `driftid-T012` volume + container, seeds the workspace, brings it up
 In Cursor/VS Code: **Cmd+Shift+P → Dev Containers: Attach to Running Container → `driftid-T012`**.
 
 The repo lives at **`/workspaces/driftID`** (on the per-task volume). `up` writes a host-side
-attached-container config so the attach opens that folder automatically (terminals also open there
-via the image `WORKDIR`); if the editor ever lands in the container home instead, use
+attached-container config so the attach opens that folder automatically **and installs the
+`devcontainer.json` extensions** (on attach, Cursor reads neither `devcontainer.json` nor the image
+label for extensions — only this config file does). Terminals also open at the repo via the image
+`WORKDIR`; if the editor ever lands in the container home instead, use
 **File → Open Folder → `/workspaces/driftID`**. Then run the
 [`implement-task`](../.cursor/skills/implement-task/SKILL.md) skill for the task — it branches,
 implements, tests, and opens the PR. (Repeat steps 4–5 for each task you want in flight.)
@@ -212,3 +214,4 @@ Parallelism comes from running multiple `up`s and attaching an agent to each.
 | `could not create leading directories of '/opt/seed/...'` (build) | Build the current Dockerfile — `sprint-base` creates `/opt/seed` as vscode-owned before cloning. |
 | `up` says repo isn't there | Check `./orchestrate.sh logs <T###>` — the seed/fetch runs at container start and may still be in progress or have logged a warning. |
 | Attach opens `/home/vscode`, not the repo | Cursor's attach folder comes from a host-side attached-container config, not the image `WORKDIR`/label. `up` now writes `…/globalStorage/anysphere.remote-containers/nameConfigs/driftid-<T###>.json` with `workspaceFolder`. If you started the container before this change (or on another host), re-run `down`+`up`, or `F1 → Dev Containers: Open Attached Container Configuration File` and set `"workspaceFolder": "/workspaces/driftID"`. |
+| Extensions missing after attach | Same root cause/file. On attach, Cursor installs extensions only from that attached-container config's `extensions` array — not from `devcontainer.json` (that's the *Reopen in Container* path) or the image's `devcontainer.metadata` label (which only feeds `remoteUser` on attach). `up` syncs the `customizations.vscode.extensions` list from `devcontainer.json` into the config. If a container predates this change, re-run `down`+`up` (needs `python3` on the host to read the list). |

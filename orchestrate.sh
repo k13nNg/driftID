@@ -45,6 +45,7 @@ WORK_IN_CONTAINER="/workspaces/driftID"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOCKERFILE="${SCRIPT_DIR}/.devcontainer/Dockerfile"
+DEVCONTAINER_JSON="${SCRIPT_DIR}/.devcontainer/devcontainer.json"
 CONTEXT="${SCRIPT_DIR}"
 
 die()  { echo "error: $*" >&2; exit 1; }
@@ -69,11 +70,13 @@ resolve_token() {
 container_exists() { docker ps -a --format '{{.Names}}' | grep -qx "$1"; }
 container_running() { docker ps --format '{{.Names}}' | grep -qx "$1"; }
 
-# Cursor's "Attach to Running Container" decides which folder to open from a
-# host-side per-container "attached configuration file" (anysphere.remote-containers'
-# nameConfigs/<container>.json). WORKDIR and the image's devcontainer.metadata label
-# do NOT drive this; without the file the attach lands in the container home
-# (/home/vscode). We write/remove that file on up/down so attach opens the repo.
+# Cursor's "Attach to Running Container" decides BOTH the opened folder and which
+# extensions to install from a host-side per-container "attached configuration file"
+# (anysphere.remote-containers' nameConfigs/<container>.json), NOT from WORKDIR,
+# the image's devcontainer.metadata label (that label only feeds remoteUser on
+# attach), or .devcontainer/devcontainer.json (that drives "Reopen in Container",
+# not attach). So we write/remove that file on up/down — mirroring devcontainer.json's
+# workspaceFolder + extension list — so attach opens the repo with the right extensions.
 attach_config_file() {
   local container="$1" base
   case "$(uname -s)" in
@@ -87,9 +90,37 @@ attach_config_file() {
 write_attach_config() {
   local container="$1" f; f="$(attach_config_file "$container")"
   mkdir -p "$(dirname "$f")" 2>/dev/null || { echo "  note: could not create attach config dir; attach may open container home" >&2; return 0; }
-  printf '{\n  "workspaceFolder": "%s"\n}\n' "$WORK_IN_CONTAINER" > "$f" 2>/dev/null \
-    && echo "  wrote attach config: opens $WORK_IN_CONTAINER on 'Attach to Running Container'" \
-    || echo "  note: could not write attach config ($f); attach may open container home" >&2
+  # Build the config with python3 so we can pull the extension list straight from
+  # devcontainer.json (single source of truth). If python3 is missing or parsing
+  # fails, fall back to a workspaceFolder-only file so attach still opens the repo.
+  if command -v python3 >/dev/null 2>&1 \
+     && python3 - "$DEVCONTAINER_JSON" "$WORK_IN_CONTAINER" > "$f" 2>/dev/null <<'PY'
+import json, re, sys
+dc_path, work = sys.argv[1], sys.argv[2]
+exts = []
+try:
+    text = open(dc_path).read()
+    try:
+        data = json.loads(text)
+    except Exception:
+        # Tolerate JSONC: strip /* */ and // comments (keeping :// in URLs) + trailing commas.
+        text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
+        text = re.sub(r"(?m)(?<!:)//.*$", "", text)
+        text = re.sub(r",(\s*[}\]])", r"\1", text)
+        data = json.loads(text)
+    exts = (data.get("customizations", {}).get("vscode", {}).get("extensions", [])) or []
+except Exception:
+    exts = []
+json.dump({"workspaceFolder": work, "extensions": exts}, sys.stdout, indent=2)
+sys.stdout.write("\n")
+PY
+  then
+    echo "  wrote attach config: opens $WORK_IN_CONTAINER + installs devcontainer.json extensions on attach"
+  else
+    printf '{\n  "workspaceFolder": "%s"\n}\n' "$WORK_IN_CONTAINER" > "$f" 2>/dev/null \
+      && echo "  wrote attach config: opens $WORK_IN_CONTAINER on attach (extensions skipped: python3 unavailable / parse failed)" \
+      || echo "  note: could not write attach config ($f); attach may open container home" >&2
+  fi
 }
 
 remove_attach_config() {
