@@ -103,9 +103,14 @@ stage 2  runtime         (python:3.10-slim)
       `ui/build|node_modules|test-results|...`, demos — keeps `data/artifacts/`, `src/`, `ui/` source.
 
 ### 6. Deploy tooling — DONE
-- [x] `deploy/push-to-hf.sh` syncs only the deployment files into a clean mirror of the Space repo
-      (`./.hf-space`, git-ignored) and pushes — avoids HF's >10 MB/LFS limits and this repo's large
-      training tensors. (See **Deploy** below.)
+- [x] `deploy/push-to-hf.sh` stages only the deployment files (`./.hf-space`, git-ignored) and uploads
+      with **`hf upload`** — avoids this repo's large training tensors AND HF's binary rule.
+- [x] **Pivoted from raw `git push` to `hf upload`.** HF rejects binaries not in Xet/LFS
+      (`Your push was rejected because it contains binary files`). `git push` of the mirror committed
+      `linear_classifier.pt` as a raw blob → rejected; `git-lfs` wasn't installed (and Homebrew install
+      failed on perms). `hf upload` stores binaries via **Xet automatically — no git-lfs needed** — and
+      `--delete "*"` keeps it a true mirror. Also dropped `ui/demos/` from the staged set (the
+      `sample-car.jpg` fixture was the other rejected binary; not needed by the app).
 
 ### 7. Local verification before pushing — DONE
 - [x] Built `--platform linux/amd64` (matches HF) and ran on `:7860`: `/health` ok, `/` serves the
@@ -113,32 +118,34 @@ stage 2  runtime         (python:3.10-slim)
       predictions (audi_a7, 0.99). Fixes found en route: torch `+cpu` pin (2.2.2+cpu for amd64),
       Flutter `:stable` + pubspec SDK lower bound `^3.12.0`, and `numpy<2` (torch 2.2.2 vs NumPy 2).
 
-### 8. Deploy to the Space — TODO (user action)
-- [ ] Run `deploy/push-to-hf.sh <space-git-url>`; authenticate with HF username + WRITE token.
-- [ ] Watch the Space **Logs** tab for the build; confirm it serves UI + predictions.
+### 8. Deploy to the Space — DONE
+- [x] Deployed to **https://huggingface.co/spaces/Garendaxe/driftid** via `deploy/push-to-hf.sh
+      Garendaxe/driftid` (commit `073fc41`). `linear_classifier.pt` landed as an Xet/LFS object.
+- [x] Build reached `RUNNING` (~2.5 min). Live smoke test passed: `/health` ok, `/` serves the UI,
+      `POST /predict` on the sample image → `audi_a7-gen_2017_2020` @ 0.99 (matches local).
 
-## Deploy (Option B — plain git push, via the mirror script)
+## Deploy (via `hf upload`)
 
 ```bash
-# from the repo root, with your Space already created (Docker SDK):
-deploy/push-to-hf.sh https://huggingface.co/spaces/<user>/driftid
-# git prompts: Username = <HF username>, Password = a HF WRITE token
+# one-time: hf auth login   (token from https://huggingface.co/settings/tokens)
+deploy/push-to-hf.sh Garendaxe/driftid      # accepts a full Space URL too
 ```
 
-The script clones the Space to `./.hf-space` (reused on later runs), copies in `Dockerfile`,
-`README.md`, `.dockerignore`, `deploy/requirements.txt`, `src/`, `data/artifacts/`, and the `ui/`
-source (no build outputs), then commits and pushes to `main`. HF rebuilds the image on each push.
+Stages `Dockerfile`, `README.md`, `.dockerignore`, `deploy/requirements.txt`, `src/`,
+`data/artifacts/`, and the `ui/` source (no build outputs / demos) into `./.hf-space`, then
+`hf upload`s them (binaries via Xet, `--delete "*"` to mirror removals). HF rebuilds on each push;
+watch the Space **Logs** tab. Also documented in `README.md` → "Deploy (Hugging Face Space)".
 
 ## Risks / open questions
 
-- [ ] **DINOv3 license/gating**: confirm `vit_base_patch16_dinov3` pulls without HF auth in the Space
-      build. If it's gated, we must add an `HF_TOKEN` Space secret and accept the model license.
-- [ ] **Cold start / RAM**: ViT-B on CPU in the free tier (2 vCPU / 16 GB) — verify inference latency is
-      acceptable for a demo; the lifespan load means the first request after boot waits for model init.
-- [ ] **Image size**: CPU torch + timm + baked backbone — confirm it stays within Space build limits.
-- [ ] **Repo privacy**: pushing to a *public* Space publishes the pushed files. Confirm what we want
-      public, or make the Space private.
-- [ ] **README ownership**: reuse `README.md` (add front-matter) vs. a dedicated Space README — pick one.
+- [x] **DINOv3 license/gating**: `vit_base_patch16_dinov3` pulled fine unauthenticated in the build
+      (only a rate-limit *warning*). If HF ever rate-limits, add an `HF_TOKEN` Space secret.
+- [x] **Cold start / RAM**: backbone is baked into the image + loaded once at startup; the live Space
+      answered `/predict` in well under a second on the free CPU tier.
+- [x] **Image size**: ~2.18 GB locally — within Space limits; built + booted on HF without issue.
+- [x] **Repo privacy**: Space is **public** (confirmed acceptable). The deploy stages only serving
+      files, so the repo's training data / bookkeeping never ships.
+- [x] **README ownership**: reused repo-root `README.md` with HF front-matter (single source).
 
 ## Out of scope (for now)
 - GPU inference / paid HF hardware.
