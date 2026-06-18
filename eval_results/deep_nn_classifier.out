@@ -1,0 +1,35 @@
+environment: line 19: /usr/share/lmod/lmod/libexec/lmod: No such file or directory
+Python: /work/k2nguyen/.conda/envs/gpu-env/bin/python
+Python 3.10.20
+env OK
+
+Device     : cuda
+Classes    : 196
+Checkpoint : data/artifacts/deep_nn_classifier.pt
+input_dim: 768
+num_classes: 196
+
+Mode: fast evaluation (pre-extracted features from data/test/test_feats.pt)
+
+Evaluating (fast):   0%|          | 0/263 [00:00<?, ?it/s]Evaluating (fast):   0%|          | 1/263 [00:00<01:57,  2.24it/s]Evaluating (fast):  75%|███████▍  | 196/263 [00:00<00:00, 473.79it/s]Evaluating (fast): 100%|██████████| 263/263 [00:00<00:00, 452.03it/s]
+
+============================================================
+  Overall Top-1 Accuracy : 91.25%
+  Total samples          : 8393
+============================================================
+
+  Worst 5 classes:
+    mercedes_c-gen_2015_2020                                 39.5%  (17/43)
+    bmw_series5-gen_2017_2020                                58.1%  (25/43)
+    nissan_sunny-gen_2004_2006                               64.7%  (11/17)
+    kia_optima-generation_2019_2020                          67.4%  (29/43)
+    nissan_maxima-gen_2019_2020                              69.4%  (25/36)
+
+  Best 5 classes:
+    toyota_hiace-gen_2019_2020                               100.0%  (38/38)
+    ford_flex-gen_2009_2020                                  100.0%  (62/62)
+    ford_f150-gen_2009_2014                                  100.0%  (23/23)
+    mazda_6-gen_2014_2020                                    100.0%  (40/40)
+    dodge_durango_2013_2021                                  100.0%  (45/45)
+============================================================
+

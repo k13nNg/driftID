@@ -1,0 +1,35 @@
+environment: line 19: /usr/share/lmod/lmod/libexec/lmod: No such file or directory
+Python: /work/k2nguyen/.conda/envs/gpu-env/bin/python
+Python 3.10.20
+env OK
+
+Device     : cuda
+Classes    : 196
+Checkpoint : data/artifacts/linear_classifier.pt
+input_dim: 768
+num_classes: 196
+
+Mode: fast evaluation (pre-extracted features from data/test/test_feats.pt)
+
+Evaluating (fast):   0%|          | 0/263 [00:00<?, ?it/s]Evaluating (fast):   0%|          | 1/263 [00:00<01:54,  2.29it/s]Evaluating (fast): 100%|██████████| 263/263 [00:00<00:00, 542.60it/s]
+
+============================================================
+  Overall Top-1 Accuracy : 94.04%
+  Total samples          : 8393
+============================================================
+
+  Worst 5 classes:
+    mercedes_c-gen_2015_2020                                 34.9%  (15/43)
+    toyota_corolla-gen_2020_2020                             70.6%  (12/17)
+    bmw_x6-gen_2015_2019                                     71.4%  (30/42)
+    bmw_series5-gen_2011_2016                                71.4%  (30/42)
+    hyundai_azera-gen_2011_2017                              72.2%  (13/18)
+
+  Best 5 classes:
+    dodge_durango_2013_2021                                  100.0%  (45/45)
+    porsche_cayenne-gen_2002_2009                            100.0%  (43/43)
+    nissan_navara-gen_2016_2020                              100.0%  (44/44)
+    nissan_datsun-gen_2010_2016                              100.0%  (87/87)
+    nissan_armada-gen_2003_2016                              100.0%  (41/41)
+============================================================
+

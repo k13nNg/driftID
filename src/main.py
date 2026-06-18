@@ -48,7 +48,7 @@ torch.save(
         "dim": DIM,
         "num_classes": NUM_CLASSES,
     },
-    "linear_classifier.pt"
+    "./data/artifacts/deep_nn_classifier.pt"
 )
 
 
