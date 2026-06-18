@@ -162,6 +162,21 @@ Worker image = `driftid-sprint:S###`. Auth (gh token) injected at runtime, never
       entrypoint writes a `~/.git-credentials` helper and rewrites `origin` to the tokenless HTTPS URL,
       so both fetch and push use the token (the SSH fetch URL isn't reachable in-container).
 
+## Follow-ups (next iteration)
+
+> Captured after the orchestrator's first successful run. Not yet implemented.
+
+- [ ] **On-start update script.** Have the container run a small start script that `cd /workspaces/driftID`
+      then pulls latest `main`. The warm-start entrypoint already does this (step 2: `git fetch && switch main
+      && pull --ff-only`); extract it into an explicit, named start script so it's obvious and reusable, and
+      confirm it always runs on container start.
+- [ ] **Auto-dispatch the agent on `up`.** `./orchestrate.sh up <T###>` should kick off the `implement-task`
+      agent for the task automatically (instead of just parking at `sleep infinity` and waiting for a human to
+      attach + run the skill).
+- [ ] **Keep a non-agent path as `up_classic`.** Preserve the current "provision + park for manual attach"
+      behavior under a separate subcommand `./orchestrate.sh up_classic <T###>` for when we don't want an
+      agent auto-dispatched.
+
 ## Explicitly out of scope (for now)
 - GPU scheduling (env is CPU-only: `faiss-cpu` + CPU PyTorch — no contention).
 - Baking **secrets/auth** into any image, or baking source into the **`base`/`dev`** layer or at the
