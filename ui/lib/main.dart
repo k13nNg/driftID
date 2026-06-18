@@ -19,6 +19,11 @@ class DriftColors {
   static const Color icyBlue = Color(0xFFBDE0FE);
   static const Color skyBlue = Color(0xFFA2D2FF);
 
+  /// Soft, light purple for large neutral surfaces (e.g. the image card) so the
+  /// dominant fill reads as the brand purple rather than blue (US-12). A lighter
+  /// tint of [thistle] keeps it distinct from the primary/app-bar purple.
+  static const Color lilacMist = Color(0xFFE6DAF1);
+
   /// Dark, high-contrast ink for text sitting on light pastel fills (US-06).
   static const Color ink = Color(0xFF2B2536);
 }
@@ -121,7 +126,7 @@ class _DriftIDAppState extends State<DriftIDApp> {
       onErrorContainer: Color(0xFF410E0B),
       surface: Colors.white,
       onSurface: DriftColors.ink,
-      surfaceContainerHighest: DriftColors.icyBlue,
+      surfaceContainerHighest: DriftColors.lilacMist,
       onSurfaceVariant: Color(0xFF574F61),
       outline: Color(0xFF8C8295),
       outlineVariant: Color(0xFFCFC6D6),
