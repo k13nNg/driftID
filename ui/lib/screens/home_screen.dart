@@ -75,6 +75,9 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() => _error = 'Could not read that file. Please try another image.');
       return;
     }
+    // Picking a file clears any live URL preview (and its field text) so the
+    // two inputs stay mutually exclusive.
+    _urlController.clear();
     setState(() {
       _bytes = file.bytes;
       _filename = file.name;
@@ -218,13 +221,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 UrlInputField(
                   controller: _urlController,
                   enabled: !_loading,
-                  onChanged: (_) {
-                    if (_bytes != null) {
-                      setState(() {
+                  onChanged: (value) {
+                    // Live preview the typed/pasted URL in the card before
+                    // Identify (US-02/US-13) — no inference call. A non-empty
+                    // URL also clears any picked file (mutual exclusion).
+                    final trimmed = value.trim();
+                    setState(() {
+                      _previewUrl = trimmed.isEmpty ? null : trimmed;
+                      if (_bytes != null) {
                         _bytes = null;
                         _filename = null;
-                      });
-                    }
+                      }
+                    });
                   },
                   onSubmitted: (_) => _identify(),
                 ),

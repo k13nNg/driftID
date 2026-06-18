@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../main.dart';
+import 'image_preview_content.dart';
 
 /// A single, self-contained image picker + preview (US-13).
 ///
@@ -63,7 +64,7 @@ class ImageSelectionCard extends StatelessWidget {
                 child: Padding(
                   // Symmetric padding on all four sides.
                   padding: const EdgeInsets.all(DriftSpacing.md),
-                  child: _hasImage ? _preview(theme) : _empty(theme),
+                  child: _hasImage ? _preview() : _empty(theme),
                 ),
               ),
               if (_hasImage)
@@ -82,16 +83,10 @@ class ImageSelectionCard extends StatelessWidget {
     );
   }
 
-  Widget _preview(ThemeData theme) {
-    if (bytes != null) {
-      return Image.memory(bytes!, fit: BoxFit.contain);
-    }
-    return Image.network(
-      url!,
-      fit: BoxFit.contain,
-      errorBuilder: (context, error, stackTrace) =>
-          _empty(theme, message: 'Preview unavailable'),
-    );
+  Widget _preview() {
+    // Bytes/url rendering (+ loading + "Preview unavailable" failure) is shared
+    // with the History thumbnail and Result view (T018).
+    return ImagePreviewContent(bytes: bytes, url: url, fit: BoxFit.contain);
   }
 
   Widget _empty(ThemeData theme, {String message = 'Tap to add a car photo'}) {
